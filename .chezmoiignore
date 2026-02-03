@@ -32,3 +32,6 @@ Session.vim
 .local/share/nvim
 .local/state/nvim
 .cache/nvim
+
+# Emacs (packages, cache, state - all generated)
+.emacs.d
