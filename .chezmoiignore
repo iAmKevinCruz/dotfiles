@@ -12,6 +12,9 @@ Session.vim
 **/.git
 **/.github
 
+# oh-my-zsh cache (generated)
+.oh-my-zsh/cache
+
 # Secrets are sourced separately
 .secrets
 
