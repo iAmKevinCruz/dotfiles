@@ -41,12 +41,14 @@ else
   export EDITOR='nvim'
 fi
 
+# Brew management (works on macOS and Linux with Linuxbrew)
+alias bbic="brew update && brew bundle install --cleanup --file=~/.config/brew/Brewfile && brew upgrade"
+alias brewconfig="chezmoi edit ~/.config/brew/Brewfile"
+alias brewbundle="brew bundle install --file ~/.config/brew/Brewfile"
+
 {{ if eq .chezmoi.os "darwin" -}}
 # macOS-specific aliases
-# Brew management
-alias bbic="brew update && brew bundle install --cleanup --file=~/.config/brew/brewfile && brew upgrade"
-alias brewconfig="v ~/.config/brew/brewfile"
-alias brewbundle="brew bundle install --file ~/.config/brew/brewfile"
+# macOS brew architecture variants
 alias brew86="arch -x86_64 /usr/local/homebrew/bin/brew"
 alias brewARM="/opt/homebrew/bin/brew"
 alias brewM1="arch -arm64 brew"
@@ -73,27 +75,35 @@ alias submitTime='pushd ~/coding_mac/repositories/my_apps/timeular-to-timecamp; 
 {{ end -}}
 
 {{ if eq .chezmoi.os "linux" -}}
-# Linux-specific aliases
+# Linux-specific setup
+# Linuxbrew
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Linux clipboard
 alias c="xclip -selection clipboard"
 {{ end -}}
 
 # Project aliases (uses env vars from ~/.secrets)
 alias pactenv='printf "# env\nDEV_FLAG=development\n\n# clerk\nVITE_CLERK_PUBLISHABLE_KEY=$PACT_CLERK_PUBLISHABLE_KEY\nCLERK_SECRET_KEY=$PACT_CLERK_SECRET_KEY\n\n# mongo\nCONNECTION_STRING=$PACT_MONGO_CONNECTION_STRING\n\n# redis\nREDIS_URL=$PACT_REDIS_URL\nREDIS_HOST=$PACT_REDIS_HOST" >> .env'
 
-# Config editing aliases
-alias zshconfig="v ~/.zshrc"
+# Config editing aliases (chezmoi-managed)
+alias zshconfig="chezmoi edit ~/.zshrc"
+alias ompconfig="chezmoi edit ~/.config/oh-my-posh/config.toml"
+alias fzfconfig="chezmoi edit ~/.fzf.zsh"
+alias nvimconfig="chezmoi edit ~/.config/nvim/"
+alias zellijconfig="chezmoi edit ~/.config/zellij/"
+alias gitconfig="chezmoi edit ~/.gitconfig"
+alias lazygitconfig="chezmoi edit ~/.config/lazygit"
+alias batconfig="chezmoi edit ~/.config/bat/"
+alias deltaconfig="chezmoi edit ~/.config/delta/"
+
+# Config editing aliases (local only)
 alias ghdashconfig="v ~/.config/gh-dash/config.yml"
-alias ompconfig="v ~/.config/oh-my-posh/config.toml"
-alias fzfconfig="v ~/.fzf.zsh"
-alias nvimconfig="v ~/.config/nvim/"
 alias weztermconfig="v ~/.config/wezterm/wezterm.lua"
 alias kittyconfig="v ~/.config/kitty/kitty.conf"
 alias tmuxconfig="v ~/.config/tmux/"
 alias sshsconfig="v ~/.ssh/config"
-alias zellijconfig="v ~/.config/zellij/"
-alias gitconfig="v ~/.gitconfig"
 alias rainfrogconfig="v ~/.config/rainfrog/rainfrog_config.toml"
-alias lazygitconfig="v ~/.config/lazygit"
 alias superfileconfig="v ~/.config/superfile"
 
 # General aliases

@@ -1,0 +1,200 @@
+# Brewfile - works on macOS and Linux (Linuxbrew)
+# Usage: brew bundle install --file ~/.config/brew/Brewfile
+# Alias: bbic (update, install, cleanup, upgrade)
+#
+# ===================
+# Adding New Packages
+# ===================
+# Check if a formula exists on both platforms:
+#   brew info <package>                    # shows info if installed/available
+#   brew search <package>                  # search for packages
+#   https://formulae.brew.sh/<package>     # web lookup, shows "Linux" badge if supported
+#
+# Rules of thumb:
+#   - "brew" formulae: most work on both macOS and Linux
+#   - "cask" packages: macOS-only (GUI apps, fonts)
+#   - "tap" repos: check the tap's README for Linux support
+#   - "mas" (Mac App Store): macOS-only
+#
+# Where to put new packages:
+#   - Works on both → add to "Cross-platform" section (no template conditional)
+#   - macOS-only    → add inside the darwin conditional blocks
+#   - Linux-only    → add inside a linux conditional: {{ "{{ if eq .chezmoi.os \"linux\" }}" }}
+
+{{ if eq .chezmoi.os "darwin" -}}
+# ===================
+# macOS-only: Fonts
+# ===================
+brew "fontconfig"
+cask "font-jetbrains-mono-nerd-font"
+cask "font-caskaydia-cove-nerd-font"
+cask "font-iosevka-term-nerd-font"
+cask "font-fira-mono-nerd-font"
+cask "font-source-code-pro"
+cask "font-source-sans-3"
+
+# ===================
+# macOS-only: GUI Apps
+# ===================
+cask "dbeaver-community"
+cask "localsend"
+cask "mongodb-compass"
+cask "firefox@developer-edition"
+cask "firefox@nightly"
+cask "zen-browser"
+cask "obsidian"
+cask "discord"
+cask "wezterm@nightly"
+cask "kitty@nightly"
+cask "karabiner-elements"
+cask "ngrok"
+cask "medis"
+cask "neovide"
+
+# ===================
+# macOS-only: Tools
+# ===================
+brew "mas"
+brew "terminal-notifier"
+
+{{ end -}}
+# ===================
+# Cross-platform: Core CLI
+# ===================
+brew "chezmoi"
+brew "git"
+brew "wget"
+brew "curl"
+brew "tree"
+brew "less"
+brew "jq"
+brew "moreutils"
+brew "coreutils"
+brew "gnu-sed"
+brew "gawk"
+brew "grep"
+
+# ===================
+# Cross-platform: Search & Navigation
+# ===================
+brew "fd"
+brew "fzf"
+brew "ripgrep"
+brew "zoxide"
+brew "eza"
+
+# ===================
+# Cross-platform: Editors
+# ===================
+brew "vim"
+brew "neovim"
+brew "neovim-remote"
+
+# ===================
+# Cross-platform: Terminal & Shell
+# ===================
+brew "zellij"
+brew "bat"
+brew "oh-my-posh"
+brew "fastfetch"
+brew "git-delta"
+brew "superfile"
+
+# ===================
+# Cross-platform: Git Tools
+# ===================
+brew "gh"
+brew "lazygit"
+
+# ===================
+# Cross-platform: Development
+# ===================
+brew "n"
+brew "ruby"
+brew "zig"
+brew "cmake"
+brew "pkg-config"
+brew "prettierd"
+brew "typescript-language-server"
+
+# Bun
+tap "oven-sh/bun"
+brew "bun"
+
+# ===================
+# Cross-platform: Databases
+# ===================
+brew "postgresql"
+brew "sqlite"
+brew "redis"
+
+# lazysql TUI
+tap "jorgerojas26/lazysql"
+brew "lazysql"
+
+# ===================
+# Cross-platform: Docker
+# ===================
+brew "jesseduffield/lazydocker/lazydocker"
+
+# ===================
+# Cross-platform: Cloud & DevOps
+# ===================
+# Azure
+tap "azure/functions"
+brew "azure-functions-core-tools@4"
+brew "azure-cli"
+
+# Supabase
+brew "supabase/tap/supabase"
+
+# Infisical secrets
+brew "infisical/get-cli/infisical"
+
+# ===================
+# Cross-platform: Python
+# ===================
+brew "pipx"
+brew "uv"
+
+# ===================
+# Cross-platform: Media
+# ===================
+brew "yt-dlp"
+brew "ffmpeg"
+brew "sox"
+
+# ===================
+# Cross-platform: SSH
+# ===================
+brew "sshs"
+
+# ===================
+# Cross-platform: Other
+# ===================
+brew "bash"
+brew "util-linux"
+brew "pandoc"
+brew "ispell"
+brew "luv"
+brew "syncthing"
+
+{{ if eq .chezmoi.os "darwin" -}}
+# ===================
+# macOS-only: Emacs
+# ===================
+tap "d12frosted/emacs-plus"
+brew "emacs-plus"
+
+# ===================
+# macOS-only: Shopify
+# ===================
+tap "shopify/shopify"
+brew "shopify-cli"
+
+# ===================
+# macOS-only: Other
+# ===================
+brew "bruno"
+brew "anomalyco/tap/opencode"
+{{ end -}}
