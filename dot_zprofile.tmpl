@@ -1,0 +1,9 @@
+# .zprofile - login shell setup (runs before .zshrc)
+
+{{ if eq .chezmoi.os "linux" -}}
+# Linuxbrew
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Fix TERM for proper terminal handling
+export TERM="${TERM:-xterm-256color}"
+{{ end -}}

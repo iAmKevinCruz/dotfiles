@@ -30,7 +30,12 @@ function zvm_config() {
 [ -f ~/.config/zsh/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh ] && \
   source ~/.config/zsh/themes/catppuccin_mocha-zsh-syntax-highlighting.zsh
 
+{{ if eq .chezmoi.os "darwin" -}}
 plugins=(git zsh-autosuggestions zsh-syntax-highlighting web-search fzf-tab zsh-vi-mode)
+{{ else -}}
+# zsh-vi-mode disabled on Linux - causes input issues over SSH
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting web-search fzf-tab)
+{{ end -}}
 
 source $ZSH/oh-my-zsh.sh
 
@@ -75,11 +80,7 @@ alias submitTime='pushd ~/coding_mac/repositories/my_apps/timeular-to-timecamp; 
 {{ end -}}
 
 {{ if eq .chezmoi.os "linux" -}}
-# Linux-specific setup
-# Linuxbrew
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-
-# Linux clipboard
+# Linux-specific aliases
 alias c="xclip -selection clipboard"
 {{ end -}}
 
