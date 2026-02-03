@@ -31,11 +31,11 @@ authorColors:
   '*': '#b4befe'
 
 git:
-  paging:
-    colorArg: never
-    pager: delta --dark --paging=never
-    # externalDiffCommand: difft --color=always --display=inline --syntax-highlight=on --tab-width=2
-    # externalDiffCommand: difft --color=always
+  pagers:
+    - colorArg: never
+      pager: delta --dark --paging=never
+      # externalDiffCommand: difft --color=always --display=inline --syntax-highlight=on --tab-width=2
+      # externalDiffCommand: difft --color=always
 
 quitOnTopLevelReturn: true
 
