@@ -1,0 +1,20 @@
+swap_tiled_layout name="bottom" {
+  tab min_panes=2 {
+    pane split_direction="horizontal" {
+      pane;
+      pane size="10%" split_direction="vertical" {
+        children;
+      }
+    }
+  }
+}
+swap_tiled_layout name="right" {
+  tab min_panes=2 {
+    pane split_direction="vertical" {
+      pane;
+      pane size="30%" split_direction="horizontal" {
+        children;
+      }
+    }
+  }
+}

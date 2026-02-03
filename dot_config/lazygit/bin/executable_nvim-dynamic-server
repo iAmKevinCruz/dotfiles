@@ -1,0 +1,28 @@
+#!/bin/bash
+
+echo "Executing nvim-dynamic-server with args: $@"
+
+# Compute the Neovim server path dynamically, similar to the Zsh function
+# project_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
+  project_name=$(git rev-parse --git-dir)
+  project_name="${project_name%/worktrees/*}"
+  project_name=$(basename "$project_name")
+if [[ -n "$project_name" ]]; then
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  branch=${branch//\//-}
+  server_path="/tmp/${project_name}/${branch}/nvim-server.pipe"
+else
+  server_path="/tmp/nvim-server.pipe"
+fi
+
+# Ensure the server directory exists
+mkdir -p "$(dirname "$server_path")"
+
+echo "LazyGit opening file in server_path: $server_path"
+
+# Execute nvim with --server, falling back to --listen if needed
+if [ -S "$server_path" ]; then
+  nvim --server "$server_path" --remote-send "<C-\><C-N>:n $@<CR>"
+else
+  nvim --listen "$server_path" "$@"
+fi

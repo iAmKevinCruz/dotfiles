@@ -1,0 +1,46 @@
+# keybinding:
+#   universal:
+
+gui:
+  theme:
+    # selectedLineBgColor:
+    #   - underline
+    selectedRangeBgColor:
+      - underline
+    activeBorderColor:
+      - '#cba6f7'
+      - bold
+    inactiveBorderColor:
+      - '#a6adc8'
+    optionsTextColor:
+      - '#89b4fa'
+    selectedLineBgColor:
+      - '#313244'
+    cherryPickedCommitBgColor:
+      - '#45475a'
+    cherryPickedCommitFgColor:
+      - '#cba6f7'
+    unstagedChangesColor:
+      - '#f38ba8'
+    defaultFgColor:
+      - '#cdd6f4'
+    searchingActiveBorderColor:
+      - '#f9e2af'
+
+authorColors:
+  '*': '#b4befe'
+
+git:
+  paging:
+    colorArg: never
+    pager: delta --dark --paging=never
+    # externalDiffCommand: difft --color=always --display=inline --syntax-highlight=on --tab-width=2
+    # externalDiffCommand: difft --color=always
+
+quitOnTopLevelReturn: true
+
+os:
+  # this will edit the file in the current neovim sesh
+  edit: "nvr -cc vsplit --remote-wait +'set bufhidden=wipe' {{filename}}" 
+  # edit: '~/Library/Application\ Support/lazygit/bin/nvim-dynamic-server {{filename}}'
+

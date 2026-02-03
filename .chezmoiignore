@@ -1,0 +1,31 @@
+# Files to ignore (not managed by chezmoi)
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor state
+Session.vim
+**/Session.vim
+
+# Git inside configs (we use .chezmoiexternal for oh-my-zsh)
+**/.git
+**/.github
+
+# Secrets are sourced separately
+.secrets
+
+# Machine-specific or generated
+.zsh_history
+.bash_history
+.lesshst
+.node_repl_history
+.python_history
+
+# Zellij plugins (large wasm files, installed separately)
+.config/zellij/plugins
+
+# Neovim state and plugins (managed by lazy.nvim)
+.local/share/nvim
+.local/state/nvim
+.cache/nvim

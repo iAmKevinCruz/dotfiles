@@ -1,0 +1,141 @@
+console_title_template = '{{ .Shell }} in {{ .Folder }}'
+version = 3
+final_space = true
+
+[palette]
+  base = '#1e1e2e'
+  blue = '#89B4FA'
+  closer = 'p:os'
+  lavender = '#B4BEFE'
+  os = '#ACB0BE'
+  peach = '#fab387'
+  pink = '#F5C2E7'
+  yellow = '#f9e2af'
+
+[secondary_prompt]
+  template = '❯❯ '
+  foreground = 'p:peach'
+  background = 'transparent'
+
+[transient_prompt]
+  template = '{{ .Folder }}❯ '
+  background = 'transparent'
+  foreground_templates = ['{{if gt .Code 0}}red{{end}}', '{{if eq .Code 0}}magenta{{end}}']
+
+[[blocks]]
+  type = 'prompt'
+  alignment = 'left'
+  newline = true
+
+  [[blocks.segments]]
+    template = '{{ .Path }}'
+    foreground = 'p:pink'
+    background = 'transparent'
+    type = 'path'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      folder_icon = '..'
+      home_icon = '~'
+      max_depth = 8
+      max_width = 80
+      mixed_threshold = 8
+      style = 'powerlevel'
+
+  [[blocks.segments]]
+    template = ' {{ if (.IsWorkTree) }}<p:peach>{{.WorktreeCount}} 󱁕</>{{ end }} {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}{{ end }} <p:blue>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
+    foreground = 'p:lavender'
+    background = 'transparent'
+    type = 'git'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      branch_icon = ' '
+      cache_duration = 'none'
+      commit_icon = ' '
+      fetch_bare_info = true
+      fetch_status = true
+      merge_icon = ' '
+      no_commits_icon = ' '
+      rebase_icon = ' '
+      revert_icon = ' '
+      tag_icon = ' '
+
+[[blocks]]
+  type = 'rprompt'
+  overflow = 'hidden'
+
+  [[blocks.segments]]
+    template = '{{ .FormattedMs }}'
+    foreground = 'p:yellow'
+    background = 'transparent'
+    type = 'executiontime'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      threshold = 5000
+
+[[blocks]]
+  type = 'prompt'
+  alignment = 'right'
+
+  [[blocks.segments]]
+    leading_diamond = ''
+    trailing_diamond = ''
+    template = '  {{ .Full }} '
+    foreground = 'p:os'
+    powerline_symbol = ''
+    background = 'transparent'
+    type = 'node'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    template = '  {{ .Full }} '
+    foreground = 'p:os'
+    powerline_symbol = ''
+    background = 'transparent'
+    type = 'rust'
+    style = 'powerline'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    template = ' 🥟 {{ .Full }} '
+    foreground = 'p:os'
+    type = 'bun'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+  [[blocks.segments]]
+    template = '  {{ .Full }} '
+    foreground = 'p:os'
+    powerline_symbol = ''
+    background = 'transparent'
+    type = 'lua'
+    style = 'powerline'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+
+[[blocks]]
+  type = 'prompt'
+  alignment = 'left'
+  newline = true
+
+  [[blocks.segments]]
+    template = '❯'
+    background = 'transparent'
+    type = 'text'
+    style = 'plain'
+    foreground_templates = ['{{if gt .Code 0}}red{{end}}', '{{if eq .Code 0}}magenta{{end}}']
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
