@@ -34,4 +34,6 @@ Session.vim
 .cache/nvim
 
 # Emacs (packages, cache, state - all generated)
-.emacs.d
+.emacs.d/*
+!.emacs.d/init.el
+!.emacs.d/early-init.el
