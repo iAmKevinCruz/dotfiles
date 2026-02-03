@@ -21,6 +21,21 @@
 #   - macOS-only    → add inside the darwin conditional blocks
 #   - Linux-only    → add inside a linux conditional: {{ "{{ if eq .chezmoi.os \"linux\" }}" }}
 
+# ===================
+# Taps (must be first - shorthand auto-tap doesn't work reliably on Linuxbrew)
+# ===================
+tap "oven-sh/bun"
+tap "jorgerojas26/lazysql"
+tap "jesseduffield/lazydocker"
+tap "azure/functions"
+tap "supabase/tap"
+tap "infisical/get-cli"
+{{ if eq .chezmoi.os "darwin" -}}
+tap "d12frosted/emacs-plus"
+tap "shopify/shopify"
+tap "anomalyco/tap"
+{{ end -}}
+
 {{ if eq .chezmoi.os "darwin" -}}
 # ===================
 # macOS-only: Fonts
