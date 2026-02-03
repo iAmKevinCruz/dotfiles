@@ -37,3 +37,4 @@ Session.vim
 .emacs.d/*
 !.emacs.d/init.el
 !.emacs.d/early-init.el
+!.emacs.d/custom-vars.el
