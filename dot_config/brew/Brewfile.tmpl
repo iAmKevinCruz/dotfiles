@@ -30,9 +30,9 @@ tap "jesseduffield/lazydocker"
 tap "azure/functions"
 tap "supabase/tap"
 tap "infisical/get-cli"
+tap "shopify/shopify"
 {{ if eq .chezmoi.os "darwin" -}}
 tap "d12frosted/emacs-plus"
-tap "shopify/shopify"
 tap "anomalyco/tap"
 {{ end -}}
 
@@ -171,6 +171,9 @@ brew "supabase/tap/supabase"
 # Infisical secrets
 brew "infisical/get-cli/infisical"
 
+# Shopify
+brew "shopify/shopify/shopify-cli"
+
 # ===================
 # Cross-platform: Python
 # ===================
@@ -204,11 +207,6 @@ brew "syncthing"
 # macOS-only: Emacs
 # ===================
 brew "d12frosted/emacs-plus/emacs-plus"
-
-# ===================
-# macOS-only: Shopify
-# ===================
-brew "shopify/shopify/shopify-cli"
 
 # ===================
 # macOS-only: Other
