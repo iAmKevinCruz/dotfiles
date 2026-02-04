@@ -7,3 +7,7 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 # Fix TERM for proper terminal handling
 export TERM="${TERM:-xterm-256color}"
 {{ end -}}
+
+{{ if eq .chezmoi.os "darwin" -}}
+eval "$(/opt/homebrew/bin/brew shellenv)"
+{{ end -}}
