@@ -18,3 +18,10 @@ swap_tiled_layout name="right" {
     }
   }
 }
+swap_tiled_layout name="stacked" {
+  tab min_panes=2 {
+    pane stacked=true {
+      children;
+    }
+  }
+}

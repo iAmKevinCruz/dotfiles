@@ -49,4 +49,30 @@ layout {
     }
     children
   }
+
+  swap_tiled_layout name="vertical" {
+    tab min_panes=2 {
+      pane split_direction="vertical" {
+        pane
+        pane { children; }
+      }
+    }
+  }
+
+  swap_tiled_layout name="horizontal" {
+    tab min_panes=2 {
+      pane split_direction="horizontal" {
+        pane
+        pane { children; }
+      }
+    }
+  }
+
+  swap_tiled_layout name="fullstack" {
+    tab min_panes=2 {
+      pane stacked=true {
+        children;
+      }
+    }
+  }
 }
