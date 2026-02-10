@@ -44,23 +44,35 @@ final_space = true
       style = 'powerlevel'
 
   [[blocks.segments]]
-    template = ' {{ if (.IsWorkTree) }}<p:peach>{{.WorktreeCount}} 󱁕</>{{ end }} {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}{{ end }} <p:blue>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
+    template = '{{ if not .Detached }} {{ if (.IsWorkTree) }}<p:peach>{{.WorktreeCount}} 󱁕</>{{ end }} {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}{{ end }} <p:blue>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>{{ end }}'
     foreground = 'p:lavender'
     background = 'transparent'
     type = 'git'
     style = 'plain'
 
     [blocks.segments.properties]
-      branch_icon = ' '
+      branch_icon = ' '
       cache_duration = 'none'
-      commit_icon = ' '
+      commit_icon = ' '
       fetch_bare_info = true
       fetch_status = true
-      merge_icon = ' '
-      no_commits_icon = ' '
-      rebase_icon = ' '
-      revert_icon = ' '
-      tag_icon = ' '
+      merge_icon = ' '
+      no_commits_icon = ' '
+      rebase_icon = ' '
+      revert_icon = ' '
+      tag_icon = ' '
+
+  [[blocks.segments]]
+    template = ' 󰘬  {{ .ChangeID }}{{ if .ClosestBookmarks }} {{ .ClosestBookmarks }}{{ end }}{{ if .Working.Changed }} {{ .Working.String }}{{ end }}'
+    foreground = 'p:peach'
+    background = 'transparent'
+    type = 'jujutsu'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      fetch_status = true
+      fetch_ahead_counter = false
 
 [[blocks]]
   type = 'rprompt'
@@ -82,11 +94,11 @@ final_space = true
   alignment = 'right'
 
   [[blocks.segments]]
-    leading_diamond = ''
-    trailing_diamond = ''
-    template = '  {{ .Full }} '
+    leading_diamond = ''
+    trailing_diamond = ''
+    template = '  {{ .Full }} '
     foreground = 'p:os'
-    powerline_symbol = ''
+    powerline_symbol = ''
     background = 'transparent'
     type = 'node'
     style = 'plain'
@@ -95,9 +107,9 @@ final_space = true
       cache_duration = 'none'
 
   [[blocks.segments]]
-    template = '  {{ .Full }} '
+    template = '  {{ .Full }} '
     foreground = 'p:os'
-    powerline_symbol = ''
+    powerline_symbol = ''
     background = 'transparent'
     type = 'rust'
     style = 'powerline'
@@ -115,9 +127,9 @@ final_space = true
       cache_duration = 'none'
 
   [[blocks.segments]]
-    template = '  {{ .Full }} '
+    template = '  {{ .Full }} '
     foreground = 'p:os'
-    powerline_symbol = ''
+    powerline_symbol = ''
     background = 'transparent'
     type = 'lua'
     style = 'powerline'
