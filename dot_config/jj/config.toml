@@ -1,0 +1,18 @@
+#:schema https://docs.jj-vcs.dev/latest/config-schema.json
+
+[user]
+name = "Kevin Cruz"
+email = "kevin@varfaj.com"
+
+[ui]
+pager = "delta"
+diff-formatter = "delta"
+
+[merge-tools.delta]
+diff-args = ["--side-by-side", "$left", "$right", "--width=$width"]
+
+[merge-tools.difft]
+diff-args = ["--color=always", "$left", "$right"]
+
+[lazyjj]
+diff-tool = "delta"
