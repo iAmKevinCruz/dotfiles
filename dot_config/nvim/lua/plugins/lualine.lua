@@ -68,6 +68,59 @@ return {
         },
       }
 
+      -- Custom VCS component: shows jj change ID + bookmark in jj repos, git branch otherwise
+      local vcs_cache = { result = "", last_update = 0, last_dir = "" }
+
+      local function vcs_branch()
+        local buf_dir = vim.fn.expand("%:p:h")
+        if buf_dir == "" then buf_dir = vim.fn.getcwd() end
+
+        local now = vim.uv.now()
+        -- Cache for 2 seconds per directory
+        if now - vcs_cache.last_update < 2000 and buf_dir == vcs_cache.last_dir then
+          return vcs_cache.result
+        end
+
+        vcs_cache.last_dir = buf_dir
+        vcs_cache.last_update = now
+
+        -- Check for jj repo by walking up directories
+        local dir = buf_dir
+        local is_jj = false
+        while dir and dir ~= "/" do
+          if vim.fn.isdirectory(dir .. "/.jj") == 1 then
+            is_jj = true
+            break
+          end
+          dir = vim.fn.fnamemodify(dir, ":h")
+        end
+
+        if is_jj then
+          local obj = vim.system(
+            { "jj", "log", "--no-graph", "-r", "@", "-T",
+              [[separate(" ", change_id.shortest(), bookmarks.map(|b| b.name()).join(", "))]] },
+            { cwd = buf_dir, text = true }
+          ):wait()
+          if obj.code == 0 and obj.stdout then
+            local info = vim.trim(obj.stdout)
+            vcs_cache.result = info ~= "" and info or ""
+            return vcs_cache.result
+          end
+        end
+
+        -- Fall back to git branch
+        local obj = vim.system(
+          { "git", "-C", buf_dir, "branch", "--show-current" },
+          { text = true }
+        ):wait()
+        if obj.code == 0 and obj.stdout then
+          vcs_cache.result = vim.trim(obj.stdout)
+        else
+          vcs_cache.result = ""
+        end
+        return vcs_cache.result
+      end
+
       require('lualine').setup {
         options = {
           -- theme = "catppuccin",
@@ -92,6 +145,11 @@ return {
           lualine_z = {}
         },
         sections = {
+          lualine_b = {
+            { vcs_branch, icon = "" },
+            'diff',
+            'diagnostics',
+          },
           lualine_c = {
             {
               'filename',
