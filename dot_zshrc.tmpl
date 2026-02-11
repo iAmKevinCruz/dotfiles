@@ -94,12 +94,13 @@ alias pactenv='printf "# env\nDEV_FLAG=development\n\n# clerk\nVITE_CLERK_PUBLIS
 alias zshconfig="chezmoi edit ~/.zshrc"
 alias ompconfig="chezmoi edit ~/.config/oh-my-posh/config.toml"
 alias fzfconfig="chezmoi edit ~/.fzf.zsh"
-alias nvimconfig="chezmoi edit ~/.config/nvim/"
-alias zellijconfig="chezmoi edit ~/.config/zellij/"
+alias nvimconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/nvim)" $(chezmoi source-path ~/.config/nvim)'
+alias zellijconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/zellij)" $(chezmoi source-path ~/.config/zellij)'
 alias gitconfig="chezmoi edit ~/.gitconfig"
-alias lazygitconfig="chezmoi edit ~/.config/lazygit"
-alias batconfig="chezmoi edit ~/.config/bat/"
-alias deltaconfig="chezmoi edit ~/.config/delta/"
+alias lazygitconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/lazygit)" $(chezmoi source-path ~/.config/lazygit)'
+alias batconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/bat)" $(chezmoi source-path ~/.config/bat)'
+alias deltaconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/delta)" $(chezmoi source-path ~/.config/delta)'
+alias jjconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/jj)" $(chezmoi source-path ~/.config/jj)'
 
 # Config editing aliases (local only)
 alias ghdashconfig="v ~/.config/gh-dash/config.yml"

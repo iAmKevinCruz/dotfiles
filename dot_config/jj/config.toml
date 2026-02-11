@@ -15,4 +15,5 @@ diff-args = ["--side-by-side", "$left", "$right", "--width=$width"]
 diff-args = ["--color=always", "$left", "$right"]
 
 [lazyjj]
-diff-tool = "delta"
+# diff-tool = "delta"
+diff-tool = "difft"

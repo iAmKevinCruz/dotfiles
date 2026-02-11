@@ -133,4 +133,16 @@ return {
     'kdheepak/lazygit.nvim',
     lazy = false,
   },
+
+  {
+    'swaits/lazyjj.nvim',
+    dependencies = 'nvim-lua/plenary.nvim',
+    -- lazy = false,
+    opts = {
+      mapping = '<leader>jj'
+    },
+    -- config = function()
+    --   require('lazyjj').setup()
+    -- end
+  }
 }
