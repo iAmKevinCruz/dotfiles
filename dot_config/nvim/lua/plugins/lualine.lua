@@ -75,6 +75,9 @@ return {
         local buf_dir = vim.fn.expand("%:p:h")
         if buf_dir == "" then buf_dir = vim.fn.getcwd() end
 
+        -- Skip non-filesystem paths (e.g. oil://, fugitive://)
+        if buf_dir:match("^%w+://") then return "" end
+
         local now = vim.uv.now()
         -- Cache for 2 seconds per directory
         if now - vcs_cache.last_update < 2000 and buf_dir == vcs_cache.last_dir then

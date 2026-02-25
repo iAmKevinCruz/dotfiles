@@ -27,7 +27,7 @@ return {
           ["gx"] = "actions.open_external",
           ["g."] = "actions.toggle_hidden",
           ["g\\"] = "actions.toggle_trash",
-          ["="] = require("oil").save(), -- does not work. Want to get the buffer save to be = like in mini.files
+          ["="] = false,
         },
         use_default_keymaps = false,
       })

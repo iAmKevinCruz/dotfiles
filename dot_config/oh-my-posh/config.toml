@@ -63,7 +63,7 @@ final_space = true
       tag_icon = ' '
 
   [[blocks.segments]]
-    template = ' 󰘬  {{ .ChangeID }}{{ if .ClosestBookmarks }} {{ .ClosestBookmarks }}{{ end }}{{ if .Working.Changed }} {{ .Working.String }}{{ end }}'
+    template = ' 󰘬 {{ .ChangeID }}{{ if .ClosestBookmarks }} {{ .ClosestBookmarks }}{{ end }}{{ if .Working.Changed }} {{ .Working.String }}{{ end }}'
     foreground = 'p:peach'
     background = 'transparent'
     type = 'jujutsu'

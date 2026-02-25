@@ -1,0 +1,40 @@
+return {
+  {
+    "douglasjordan2/claudecode.nvim",
+    build = function()
+      require("claudecode.build").install()
+    end,
+    config = function()
+      require("claudecode").setup({
+        ui = {
+          mode = "split",           -- "split" or "float"
+          split_width = 80,         -- width of split panel
+          float_width = 0.7,        -- float width (0-1 = fraction, >1 = pixels)
+          float_height = 0.8,       -- float height (0-1 = fraction, >1 = pixels)
+          border = "rounded",       -- border style for float windows
+          input_min_height = 2,     -- minimum height of the input box
+          input_max_height = 10,    -- maximum height of the input box
+        },
+        keymaps = {
+          toggle = "<leader>cc",    -- toggle chat window
+          send = "<leader>cs",      -- focus input
+          context = "<leader>cx",   -- send with file context
+          visual = "<leader>cv",    -- send visual selection
+          abort = "<leader>ca",     -- abort current request
+          accept_diff = "<leader>cy", -- accept diff in diff viewer
+          reject_diff = "<leader>cn", -- reject diff in diff viewer
+          sessions = "<leader>cl",  -- list/resume sessions
+        },
+        truncation = {
+          tool_result = 120,        -- max length for tool result display
+          command = 60,             -- max length for command display
+        },
+        model = nil,                -- override Claude model
+        allowed_tools = nil,        -- restrict available tools
+        append_system_prompt = nil, -- append to system prompt
+        permission_mode = nil,      -- permission mode for claude CLI
+        binary_path = nil,          -- custom path to bridge binary
+      })
+    end,
+  }
+}
