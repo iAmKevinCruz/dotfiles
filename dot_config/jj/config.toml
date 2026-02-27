@@ -14,6 +14,12 @@ diff-args = ["--side-by-side", "$left", "$right", "--width=$width"]
 [merge-tools.difft]
 diff-args = ["--color=always", "$left", "$right"]
 
+[aliases]
+# Show stale local divergent commits (safe to abandon after a GitHub merge)
+divergent-local = ["log", "-r", "divergent() ~ ::remote_bookmarks()"]
+# Abandon stale local divergent commits after a GitHub merge
+abandon-merged = ["abandon", "divergent() ~ ::remote_bookmarks()"]
+
 [lazyjj]
 # diff-tool = "delta"
 diff-tool = "difft"
