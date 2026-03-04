@@ -28,6 +28,23 @@ keybinds {
     }
     bind "Alt n" { GoToNextTab; }
     bind "Alt p" { GoToPreviousTab; }
+    bind "Alt N" {
+      MessagePlugin "zjsessions" {
+        name "cycle_next"
+      }
+    }
+    bind "Alt P" {
+      MessagePlugin "zjsessions" {
+        name "cycle_prev"
+      }
+    }
+    bind "Alt s" {
+      LaunchOrFocusPlugin "zjsessions" {
+        floating true
+        move_to_focused_tab true
+      }
+      SwitchToMode "Locked"
+    }
   }
   resize {
     bind "Ctrl n" { SwitchToMode "Normal"; }
@@ -238,11 +255,13 @@ plugins {
   configuration location="zellij:configuration"
   plugin-manager location="zellij:plugin-manager"
   about location="zellij:about"
+  zjsessions location="file:~/.config/zellij/plugins/zjsessions.wasm"
 }
 
 load_plugins {
   // "file:/path/to/my-plugin.wasm"
   // "https://example.com/my-plugin.wasm"
+  "zjsessions"
   "~/.config/zellij/plugins/zjstatus/zjframes_v0.21.1.wasm" {
     hide_frame_for_single_pane       "true"
     hide_frame_except_for_search     "true"

@@ -3,7 +3,7 @@ layout {
     pane size=1 borderless=true {
       // plugin location="file:target/wasm32-wasi/debug/zjstatus.wasm" {
       plugin location="file:~/.config/zellij/plugins/zjstatus/zjstatus_v0.21.1.wasm" {
-        format_left  "{mode} #[fg=#89B4FA,bold]{session} {tabs}"
+        format_left  "{mode} #[fg=#89B4FA,bold]{session} {command_sessions}{tabs}"
         format_right "{command_git_branch} {command_meeting} {datetime}"
         format_space ""
 
@@ -36,6 +36,11 @@ layout {
         command_meeting_format "#[fg=#b4befe, bg=black] {stdout}"
         command_meeting_interval "60" // Update every 60 seconds
         command_meeting_rendermode "static"
+
+        command_sessions_command     "bash -c 'C=$(zellij list-sessions -sn 2>/dev/null | wc -l); [ \"$C\" -gt 1 ] && echo \"[$C]\" || echo \"\"'"
+        command_sessions_format      "#[fg=#a6e3a1]{stdout}"
+        command_sessions_interval    "5"
+        command_sessions_rendermode  "static"
 
         command_git_branch_command     "git rev-parse --abbrev-ref HEAD"
         command_git_branch_format      "#[fg=blue] {stdout} "
