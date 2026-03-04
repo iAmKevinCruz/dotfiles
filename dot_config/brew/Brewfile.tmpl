@@ -34,6 +34,7 @@ tap "shopify/shopify"
 {{ if eq .chezmoi.os "darwin" -}}
 tap "d12frosted/emacs-plus"
 tap "anomalyco/tap"
+tap "manaflow-ai/cmux"
 {{ end -}}
 
 {{ if eq .chezmoi.os "darwin" -}}
@@ -216,4 +217,5 @@ brew "d12frosted/emacs-plus/emacs-plus"
 # ===================
 brew "bruno"
 brew "anomalyco/tap/opencode"
+cask "cmux"
 {{ end -}}

@@ -132,6 +132,217 @@ wt() {
   fi
 }
 
+# --- ws: JJ Workspace Manager ---
+
+# Find the true repo root (where .jj/repo/ lives)
+_ws_root() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -d "$dir/.jj/repo" ]]; then
+      echo "$dir"
+      return 0
+    fi
+    dir="${dir:h}"
+  done
+  echo "Error: not inside a jj repository" >&2
+  return 1
+}
+
+# Get workspace names, one per line
+_ws_names() {
+  local root="$1"
+  jj -R "$root" workspace list --no-pager -T 'name ++ "\n"'
+}
+
+# Get the actual path for a workspace (handles external workspaces)
+_ws_path() {
+  local root="$1" name="$2"
+  jj -R "$root" workspace root --name "$name" --no-pager --quiet 2>/dev/null
+}
+
+ws() {
+  local subcmd="${1:-}"
+
+  case "$subcmd" in
+    init)   shift; _ws_init "$@" ;;
+    create) shift; _ws_create "$@" ;;
+    list)   shift; _ws_list "$@" ;;
+    remove) shift; _ws_remove "$@" ;;
+    launch) shift; _ws_launch "$@" ;;
+    *)      _ws_pick "$@" ;;
+  esac
+}
+
+_ws_pick() {
+  local root
+  root=$(_ws_root) || return 1
+
+  local initial_query="$*"
+  local names
+  names=$(_ws_names "$root") || return 1
+
+  if [[ -z "$names" ]]; then
+    echo "No workspaces found. Use 'ws create <name>' to create one."
+    return 1
+  fi
+
+  local selected
+  selected=$(echo "$names" | fzf-tmux \
+    -q "$initial_query" \
+    -d $(( 2 + $(wc -l <<< "$names") )) \
+    +m --keep-right \
+    --preview "jj -R '$root' log --no-pager --color=always -r '{1}@' --limit 5")
+
+  if [[ -n "$selected" ]]; then
+    local ws_path
+    ws_path=$(_ws_path "$root" "$selected")
+    if [[ -d "$ws_path" ]]; then
+      z "$ws_path"
+    else
+      echo "Error: workspace directory '$ws_path' not found." >&2
+      return 1
+    fi
+  fi
+}
+
+_ws_init() {
+  local root
+  root=$(_ws_root) || return 1
+
+  local names
+  names=$(_ws_names "$root")
+
+  if echo "$names" | grep -qx 'default'; then
+    jj -R "$root" new 'root()' --quiet
+    jj -R "$root" workspace forget default --quiet
+    echo "Initialized bare layout: cleared root and forgot default workspace."
+  else
+    echo "Already initialized (no default workspace)."
+  fi
+}
+
+_ws_create() {
+  local input="$1"
+  if [[ -z "$input" ]]; then
+    echo "Usage: ws create <name>  (e.g., ws create feature/add-auth)" >&2
+    return 1
+  fi
+
+  local root
+  root=$(_ws_root) || return 1
+
+  # slash → dot for workspace name and directory, keep slash for bookmark
+  local ws_name="${input//\//.}"
+  local bookmark="$input"
+  local ws_path="$root/$ws_name"
+
+  if [[ -d "$ws_path" ]]; then
+    echo "Error: directory '$ws_name' already exists." >&2
+    return 1
+  fi
+
+  local names
+  names=$(_ws_names "$root")
+  if echo "$names" | grep -qx "$ws_name"; then
+    echo "Error: workspace '$ws_name' already exists." >&2
+    return 1
+  fi
+
+  jj -R "$root" workspace add --name "$ws_name" "$ws_path" -r 'trunk()' --quiet
+  jj -R "$root" bookmark create "$bookmark" -r "$ws_name@" --quiet
+  cd "$ws_path"
+  echo "Created workspace '$ws_name' (bookmark: $bookmark)"
+}
+
+_ws_list() {
+  local root
+  root=$(_ws_root) || return 1
+
+  jj -R "$root" workspace list --no-pager
+}
+
+_ws_remove() {
+  local root
+  root=$(_ws_root) || return 1
+
+  local initial_query="$*"
+  local names
+  names=$(_ws_names "$root") || return 1
+
+  if [[ -z "$names" ]]; then
+    echo "No workspaces to remove."
+    return 1
+  fi
+
+  local selected
+  selected=$(echo "$names" | fzf-tmux \
+    -q "$initial_query" \
+    -d $(( 2 + $(wc -l <<< "$names") )) \
+    +m --keep-right \
+    --preview "jj -R '$root' log --no-pager --color=always -r '{1}@' --limit 5")
+
+  if [[ -z "$selected" ]]; then
+    return 0
+  fi
+
+  local ws_path
+  ws_path=$(_ws_path "$root" "$selected")
+
+  echo -n "Remove workspace '$selected' and delete '$ws_path'? [y/N] "
+  read -r confirm
+  if [[ "$confirm" != [yY] ]]; then
+    echo "Aborted."
+    return 0
+  fi
+
+  jj -R "$root" workspace forget "$selected" --quiet
+  if [[ -d "$ws_path" ]]; then
+    rm -rf "$ws_path"
+  fi
+  echo "Removed workspace '$selected'."
+
+  # If we were inside the removed workspace, go to repo root
+  if [[ "$PWD" == "$ws_path"* ]]; then
+    cd "$root"
+  fi
+}
+
+_ws_launch() {
+  local input="$1"
+  if [[ -z "$input" ]]; then
+    echo "Usage: ws launch <name> <cmd> [args...]" >&2
+    return 1
+  fi
+  shift
+
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: ws launch <name> <cmd> [args...]" >&2
+    return 1
+  fi
+
+  local root
+  root=$(_ws_root) || return 1
+
+  # slash → dot for workspace name and directory
+  local ws_name="${input//\//.}"
+
+  local ws_path
+  local names
+  names=$(_ws_names "$root")
+
+  if echo "$names" | grep -qx "$ws_name"; then
+    # Existing workspace — resolve real path
+    ws_path=$(_ws_path "$root" "$ws_name")
+  else
+    # New workspace — create inside repo root (no bookmark for ephemeral launches)
+    ws_path="$root/$ws_name"
+    jj -R "$root" workspace add --name "$ws_name" "$ws_path" -r 'trunk()' --quiet
+    echo "Created workspace '$ws_name'."
+  fi
+
+  # Run command in subshell — doesn't affect parent shell cwd
+  (cd "$ws_path" && "$@")
+}
 
 # catppuccin mocha theme
 export FZF_DEFAULT_OPTS=" \
