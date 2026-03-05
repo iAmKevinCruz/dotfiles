@@ -164,13 +164,44 @@ ws() {
   local subcmd="${1:-}"
 
   case "$subcmd" in
+    -h|--help|help) _ws_help ;;
     init)   shift; _ws_init "$@" ;;
     create) shift; _ws_create "$@" ;;
     list)   shift; _ws_list "$@" ;;
     remove) shift; _ws_remove "$@" ;;
+    rename) shift; _ws_rename "$@" ;;
     launch) shift; _ws_launch "$@" ;;
+    tidy)   shift; _ws_tidy "$@" ;;
+    push)   shift; _ws_push "$@" ;;
+    status) shift; _ws_status "$@" ;;
+    sync)   shift; _ws_sync "$@" ;;
+    clean)  shift; _ws_clean "$@" ;;
     *)      _ws_pick "$@" ;;
   esac
+}
+
+_ws_help() {
+  cat <<'EOF'
+ws — JJ Workspace Manager
+
+Usage: ws [command] [args...]
+
+Commands:
+  ws [query]                       Switch workspaces (fzf picker)
+  ws init                          Convert fresh clone to bare layout
+  ws create [name] [-r rev] ...    Create workspace (direct or browse mode)
+  ws list                          List workspaces with status
+  ws remove [query]                Remove workspace (fzf picker)
+  ws rename <old> <new>            Rename workspace + directory + bookmark
+  ws launch <name> <cmd> [args]    Create workspace + run command in subshell
+  ws tidy [--model=<model>]        AI-assisted change organization
+  ws push [name]                   Advance bookmark + push
+  ws status                        Overview of all workspaces
+  ws sync                          Fetch + rebase onto trunk
+  ws clean                         Remove merged workspaces
+
+Run 'ws <command> -h' for command-specific help.
+EOF
 }
 
 _ws_pick() {
@@ -222,10 +253,24 @@ _ws_init() {
 }
 
 _ws_create() {
-  local input="$1"
+  local input="" rev="" remote="" fetch=false
+
+  # Parse args: ws create [<name>] [-r <rev>] [--remote[=<remote>]] [-f] [-h]
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help) _ws_create_help; return 0 ;;
+      -f|--fetch) fetch=true; shift ;;
+      -r)       rev="$2"; shift 2 ;;
+      --remote=*) remote="${1#--remote=}"; shift ;;
+      --remote) remote="${2:-origin}"; shift 2 ;;
+      *)        input="$1"; shift ;;
+    esac
+  done
+
+  # No name given → interactive browse mode
   if [[ -z "$input" ]]; then
-    echo "Usage: ws create <name>  (e.g., ws create feature/add-auth)" >&2
-    return 1
+    _ws_create_browse "$remote" "$fetch"
+    return $?
   fi
 
   local root
@@ -248,10 +293,152 @@ _ws_create() {
     return 1
   fi
 
-  jj -R "$root" workspace add --name "$ws_name" "$ws_path" -r 'trunk()' --quiet
-  jj -R "$root" bookmark create "$bookmark" -r "$ws_name@" --quiet
+  # Determine base revision
+  local base_rev='trunk()'
+  if [[ -n "$remote" ]]; then
+    echo "Fetching '$bookmark' from $remote..."
+    if ! jj -R "$root" git fetch --remote "$remote" --branch "$bookmark" 2>&1; then
+      echo "Error: failed to fetch '$bookmark' from $remote." >&2
+      return 1
+    fi
+    base_rev="$bookmark@$remote"
+  elif [[ -n "$rev" ]]; then
+    base_rev="$rev"
+  fi
+
+  jj -R "$root" workspace add --name "$ws_name" "$ws_path" -r "$base_rev" --quiet
+
+  # Create bookmark if one doesn't already exist
+  if jj -R "$root" bookmark create "$bookmark" -r "$ws_name@" --quiet 2>/dev/null; then
+    # Track remote if fetched from one
+    if [[ -n "$remote" ]]; then
+      jj -R "$root" bookmark track "$bookmark@$remote" --quiet 2>/dev/null
+    fi
+    echo "Created workspace '$ws_name' (bookmark: $bookmark)"
+  else
+    echo "Created workspace '$ws_name' (bookmark '$bookmark' already exists, skipped)"
+  fi
+
   cd "$ws_path"
-  echo "Created workspace '$ws_name' (bookmark: $bookmark)"
+}
+
+_ws_create_help() {
+  cat >&2 <<'EOF'
+Usage: ws create [<name>] [-r <rev>] [--remote[=<remote>]] [-f] [-h]
+
+Browse mode (no name given):
+  ws create                       Browse all bookmarks (local + remote)
+  ws create -f                    Same, but fetch from all remotes first
+  ws create --remote              Browse only origin's branches (fetches)
+  ws create --remote=upstream     Browse only upstream's branches (fetches)
+
+Direct mode (name given):
+  ws create feature/auth          Create workspace on trunk()
+  ws create feature/auth -r main  Create workspace on specific revision
+  ws create feature/auth --remote Fetch + track from origin
+
+Flags:
+  -f, --fetch       Fetch all remotes before browsing
+  -r <rev>          Base revision for new workspace
+  --remote[=<name>] Filter to remote branches / fetch from remote (default: origin)
+  -h, --help        Show this help
+EOF
+}
+
+_ws_create_browse() {
+  local remote="$1" fetch="$2"
+
+  local root
+  root=$(_ws_root) || return 1
+
+  # Fetch if requested
+  if [[ -n "$remote" ]]; then
+    echo "Fetching from $remote..."
+    jj -R "$root" git fetch --remote "$remote" 2>&1
+  elif [[ "$fetch" == true ]]; then
+    echo "Fetching from all remotes..."
+    jj -R "$root" git fetch 2>&1
+  fi
+
+  # Build bookmark list
+  local bookmarks
+  if [[ -n "$remote" ]]; then
+    # Remote-only: list bookmarks from that remote, deduplicated
+    bookmarks=$(jj -R "$root" bookmark list --remote "$remote" --no-pager \
+      -T 'name ++ "\n"' 2>/dev/null | sort -u)
+  else
+    # All: local bookmarks + all remote bookmarks, deduplicated
+    bookmarks=$(jj -R "$root" bookmark list --all-remotes --no-pager \
+      -T 'name ++ "\n"' 2>/dev/null | sort -u)
+  fi
+
+  if [[ -z "$bookmarks" ]]; then
+    echo "No bookmarks found."
+    return 1
+  fi
+
+  # Get existing workspaces for marking
+  local existing_ws
+  existing_ws=$(_ws_names "$root")
+
+  # Build display list: mark bookmarks that already have a workspace
+  local display_lines=()
+  while IFS= read -r bm; do
+    [[ -z "$bm" ]] && continue
+    local ws_name="${bm//\//.}"
+    if echo "$existing_ws" | grep -qx "$ws_name"; then
+      display_lines+=("● $bm")
+    else
+      display_lines+=("  $bm")
+    fi
+  done <<< "$bookmarks"
+
+  local header="● = workspace exists (will switch)  │  enter = create workspace"
+
+  # fzf selection
+  local selected
+  selected=$(printf '%s\n' "${display_lines[@]}" | fzf-tmux \
+    -d $(( 3 + ${#display_lines[@]} )) \
+    +m --keep-right \
+    --header "$header" \
+    --preview "
+      branch=\$(echo {} | sed 's/^[● ]*//')
+      jj -R '$root' log --no-pager --color=always -r \"\$branch\" --limit 5 2>/dev/null \
+        || echo 'No local revision (remote-only branch)'")
+
+  [[ -z "$selected" ]] && return 0
+
+  # Strip marker prefix to get the branch name
+  local branch_name="${selected#● }"
+  branch_name="${branch_name#  }"
+
+  local ws_name="${branch_name//\//.}"
+
+  # If workspace already exists, switch to it
+  if echo "$existing_ws" | grep -qx "$ws_name"; then
+    local ws_path
+    ws_path=$(_ws_path "$root" "$ws_name")
+    echo "Switching to existing workspace '$ws_name'"
+    z "$ws_path"
+    return 0
+  fi
+
+  # Create new workspace from this branch
+  if [[ -n "$remote" ]]; then
+    _ws_create "$branch_name" --remote="$remote"
+  else
+    # Check if this branch exists on a remote, prefer creating from remote
+    local branch_remote
+    branch_remote=$(jj -R "$root" bookmark list --all-remotes --no-pager \
+      -T 'name ++ "\t" ++ remote ++ "\n"' 2>/dev/null \
+      | grep "^${branch_name}	" | grep -v "	$" | grep -v "	git$" | head -1 | cut -f2)
+
+    if [[ -n "$branch_remote" ]]; then
+      _ws_create "$branch_name" --remote="$branch_remote"
+    else
+      _ws_create "$branch_name"
+    fi
+  fi
 }
 
 _ws_list() {
@@ -342,6 +529,388 @@ _ws_launch() {
 
   # Run command in subshell — doesn't affect parent shell cwd
   (cd "$ws_path" && "$@")
+}
+
+_ws_rename() {
+  if [[ $# -lt 2 || "$1" == "-h" || "$1" == "--help" ]]; then
+    cat >&2 <<'EOF'
+Usage: ws rename <old> <new>
+
+Renames a workspace, its directory, and its bookmark atomically.
+Both names use slash notation (e.g., feature/old feature/new).
+
+Example:
+  ws rename feature/auth feature/authentication
+EOF
+    [[ "$1" == "-h" || "$1" == "--help" ]] && return 0
+    return 1
+  fi
+
+  local root
+  root=$(_ws_root) || return 1
+
+  local old_input="$1" new_input="$2"
+  local old_ws="${old_input//\//.}"
+  local new_ws="${new_input//\//.}"
+  local old_bookmark="$old_input"
+  local new_bookmark="$new_input"
+
+  # Verify old workspace exists
+  local names
+  names=$(_ws_names "$root")
+  if ! echo "$names" | grep -qx "$old_ws"; then
+    echo "Error: workspace '$old_ws' not found." >&2
+    return 1
+  fi
+
+  # Verify new workspace doesn't exist
+  if echo "$names" | grep -qx "$new_ws"; then
+    echo "Error: workspace '$new_ws' already exists." >&2
+    return 1
+  fi
+
+  local old_path
+  old_path=$(_ws_path "$root" "$old_ws")
+  local new_path="$root/$new_ws"
+
+  # Must be outside the workspace being renamed
+  if [[ "$PWD" == "$old_path"* ]]; then
+    echo "Error: can't rename workspace while inside it. cd to repo root first." >&2
+    return 1
+  fi
+
+  # 1. Rename the jj workspace
+  # jj workspace rename only works for the current workspace, so we need to
+  # create new + forget old instead
+  jj -R "$root" workspace add --name "$new_ws" "$new_path" -r "$old_ws@" --quiet 2>&1
+  jj -R "$root" workspace forget "$old_ws" --quiet 2>&1
+
+  # 2. Remove old directory
+  if [[ -d "$old_path" ]]; then
+    rm -rf "$old_path"
+  fi
+
+  # 3. Rename bookmark if it exists
+  if jj -R "$root" bookmark list --no-pager -T 'name ++ "\n"' 2>/dev/null | grep -qx "$old_bookmark"; then
+    jj -R "$root" bookmark rename "$old_bookmark" "$new_bookmark" --quiet 2>&1
+    echo "Renamed workspace '$old_ws' → '$new_ws' (bookmark: $old_bookmark → $new_bookmark)"
+  else
+    echo "Renamed workspace '$old_ws' → '$new_ws' (no bookmark to rename)"
+  fi
+}
+
+_ws_push() {
+  local root
+  root=$(_ws_root) || return 1
+
+  # Determine which workspace to push
+  local ws_name
+  if [[ -n "$1" ]]; then
+    ws_name="${1//\//.}"
+  else
+    # Detect current workspace from PWD
+    local names
+    names=$(_ws_names "$root")
+    while IFS= read -r name; do
+      local wp
+      wp=$(_ws_path "$root" "$name")
+      if [[ "$PWD" == "$wp"* ]]; then
+        ws_name="$name"
+        break
+      fi
+    done <<< "$names"
+
+    if [[ -z "$ws_name" ]]; then
+      echo "Error: not inside a workspace. Specify a name: ws push <name>" >&2
+      return 1
+    fi
+  fi
+
+  # Convert workspace name (dot) back to bookmark name (slash)
+  local bookmark="${ws_name//.//}"
+
+  # Advance bookmark to workspace's current change
+  echo "Advancing bookmark '$bookmark'..."
+  if ! jj -R "$root" bookmark advance "$bookmark" --to "$ws_name@" --quiet 2>/dev/null; then
+    # bookmark advance failed — try bookmark set as fallback (bookmark may not be an ancestor)
+    if ! jj -R "$root" bookmark set "$bookmark" -r "$ws_name@" --quiet 2>&1; then
+      echo "Error: failed to advance bookmark '$bookmark'." >&2
+      return 1
+    fi
+  fi
+
+  # Push
+  echo "Pushing '$bookmark'..."
+  jj -R "$root" git push --bookmark "$bookmark" 2>&1
+}
+
+_ws_status() {
+  local root
+  root=$(_ws_root) || return 1
+
+  local names
+  names=$(_ws_names "$root")
+
+  if [[ -z "$names" ]]; then
+    echo "No workspaces."
+    return 0
+  fi
+
+  # Header
+  printf "%-25s %-15s %-8s %s\n" "WORKSPACE" "BOOKMARK" "AHEAD" "DESCRIPTION"
+  printf "%-25s %-15s %-8s %s\n" "─────────" "────────" "─────" "───────────"
+
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+
+    local bookmark="${name//.//}"
+
+    # Count commits ahead of trunk
+    local ahead
+    ahead=$(jj -R "$root" log --no-pager -r "trunk()..${name}@" -T 'concat("")' 2>/dev/null | wc -l)
+
+    # Get description of current change
+    local desc
+    desc=$(jj -R "$root" log --no-pager --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
+    [[ -z "$desc" ]] && desc="(no description)"
+
+    # Truncate long descriptions
+    if [[ ${#desc} -gt 45 ]]; then
+      desc="${desc:0:42}..."
+    fi
+
+    printf "%-25s %-15s %-8s %s\n" "$name" "$bookmark" "$ahead" "$desc"
+  done <<< "$names"
+}
+
+_ws_sync() {
+  local root
+  root=$(_ws_root) || return 1
+
+  echo "Fetching..."
+  jj -R "$root" git fetch 2>&1
+
+  echo "Rebasing onto trunk..."
+  if jj rebase -d 'trunk()' --quiet 2>&1; then
+    echo "Synced."
+    jj log --no-pager --limit 3
+  else
+    echo "Rebase had conflicts. Resolve with: jj resolve" >&2
+    return 1
+  fi
+}
+
+_ws_clean() {
+  local root
+  root=$(_ws_root) || return 1
+
+  local names
+  names=$(_ws_names "$root")
+
+  if [[ -z "$names" ]]; then
+    echo "No workspaces."
+    return 0
+  fi
+
+  # Find workspaces whose change is an ancestor of trunk (i.e., merged)
+  local merged=()
+  while IFS= read -r name; do
+    [[ -z "$name" ]] && continue
+
+    # Check if workspace's change is in trunk's ancestry
+    local is_merged
+    is_merged=$(jj -R "$root" log --no-pager -r "${name}@ & ::trunk()" -T 'change_id' 2>/dev/null)
+    if [[ -n "$is_merged" ]]; then
+      merged+=("$name")
+    fi
+  done <<< "$names"
+
+  if [[ ${#merged[@]} -eq 0 ]]; then
+    echo "No merged workspaces to clean up."
+    return 0
+  fi
+
+  echo "Merged workspaces (safe to remove):"
+  for name in "${merged[@]}"; do
+    local desc
+    desc=$(jj -R "$root" log --no-pager --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
+    echo "  $name — $desc"
+  done
+
+  echo ""
+  echo -n "Remove all ${#merged[@]} merged workspace(s)? [y/N] "
+  read -r confirm
+  if [[ "$confirm" != [yY] ]]; then
+    echo "Aborted."
+    return 0
+  fi
+
+  for name in "${merged[@]}"; do
+    local ws_path
+    ws_path=$(_ws_path "$root" "$name")
+
+    jj -R "$root" workspace forget "$name" --quiet
+    if [[ -d "$ws_path" ]]; then
+      rm -rf "$ws_path"
+    fi
+    echo "Removed '$name'."
+  done
+
+  # If we were inside a removed workspace, go to repo root
+  if [[ ! -d "$PWD" ]]; then
+    cd "$root"
+  fi
+}
+
+_ws_tidy() {
+  local root model="sonnet"
+  root=$(_ws_root) || return 1
+
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help) _ws_tidy_help; return 0 ;;
+      --model=*) model="${1#--model=}"; shift ;;
+      --model) model="$2"; shift 2 ;;
+      *) echo "Unknown option: $1" >&2; return 1 ;;
+    esac
+  done
+
+  # Gather workspace context
+  echo "Analyzing workspace..."
+  local jj_status jj_diff jj_log
+  jj_status=$(jj st --no-pager 2>&1)
+  jj_diff=$(jj diff --no-pager 2>&1)
+  jj_log=$(jj log --no-pager --limit 10 2>&1)
+
+  # Check there's something to tidy
+  if [[ "$jj_status" == "The working copy is clean" ]] && \
+     ! echo "$jj_log" | grep -q '(empty) (no description set)'; then
+    echo "Nothing to tidy — working copy is clean and all changes are described."
+    return 0
+  fi
+
+  # Record operation ID for undo safety
+  local op_id
+  op_id=$(jj op log --no-pager --limit 1 -T 'id.short() ++ "\n"' 2>/dev/null | head -1)
+
+  local prompt
+  prompt=$(cat <<'PROMPT'
+You are a jj (Jujutsu) version control assistant. Analyze this workspace state and propose commands to organize the changes into clean, logical revisions with proper descriptions.
+
+Rules:
+- ONLY use non-interactive jj commands (no -i flags, no editor-opening commands)
+- Allowed commands: jj describe -m, jj new, jj squash --into, jj split (with path args only), jj absorb
+- Each command must be on its own line, prefixed with exactly "$ " (dollar sign + space)
+- Explain each step briefly BEFORE its command(s)
+- If changes are already clean, say so and propose nothing
+- Write concise, conventional-commit-style descriptions (feat:, fix:, refactor:, docs:, etc.)
+- Do NOT invent changes that aren't in the diff — only organize what exists
+
+Workspace state:
+
+=== jj st ===
+%STATUS%
+
+=== jj diff ===
+%DIFF%
+
+=== jj log (last 10) ===
+%LOG%
+
+Propose a tidy plan:
+PROMPT
+)
+
+  # Inject context into prompt
+  prompt="${prompt/\%STATUS\%/$jj_status}"
+  prompt="${prompt/\%DIFF\%/$jj_diff}"
+  prompt="${prompt/\%LOG\%/$jj_log}"
+
+  # Get plan from AI
+  echo "Generating tidy plan (model: $model)..."
+  local plan
+  plan=$(echo "$prompt" | claude -p --model "$model" --allowedTools "" 2>&1)
+  local rc=$?
+
+  if [[ $rc -ne 0 || -z "$plan" ]]; then
+    echo "Error: failed to generate plan." >&2
+    return 1
+  fi
+
+  # Display the plan
+  echo ""
+  echo "━━━ Tidy Plan ━━━"
+  echo ""
+  echo "$plan"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━"
+
+  # Extract commands (lines starting with "$ ")
+  local commands
+  commands=$(echo "$plan" | grep '^[$] ' | sed 's/^[$] //')
+
+  if [[ -z "$commands" ]]; then
+    echo "No commands to execute — workspace looks clean."
+    return 0
+  fi
+
+  local cmd_count
+  cmd_count=$(echo "$commands" | wc -l)
+
+  echo ""
+  echo "Commands to execute ($cmd_count):"
+  echo "$commands" | while IFS= read -r cmd; do
+    echo "  → $cmd"
+  done
+  echo ""
+  echo "Undo with: jj op restore $op_id"
+  echo ""
+  echo -n "Execute? [y/N] "
+  read -r confirm
+  if [[ "$confirm" != [yY] ]]; then
+    echo "Aborted."
+    return 0
+  fi
+
+  # Execute commands one at a time
+  echo ""
+  while IFS= read -r cmd; do
+    echo "→ $cmd"
+    if ! eval "$cmd" 2>&1; then
+      echo "Error: command failed. Stopping." >&2
+      echo "Undo all changes with: jj op restore $op_id" >&2
+      return 1
+    fi
+  done <<< "$commands"
+
+  echo ""
+  echo "Done. Undo with: jj op restore $op_id"
+  jj log --no-pager --limit 5
+}
+
+_ws_tidy_help() {
+  cat >&2 <<'EOF'
+Usage: ws tidy [--model=<model>] [-h]
+
+AI-assisted change organization. Analyzes your workspace and proposes
+jj commands to organize edits into clean, logical revisions.
+
+Flow:
+  1. Gathers jj st, jj diff, jj log
+  2. Sends context to AI for analysis
+  3. Shows proposed plan with commands
+  4. Asks for confirmation before executing
+  5. Prints undo command (jj op restore) for safety
+
+Flags:
+  --model=<model>  AI model to use (default: sonnet)
+  -h, --help       Show this help
+
+Examples:
+  ws tidy                  Tidy with default model (sonnet)
+  ws tidy --model=haiku    Tidy with faster/cheaper model
+EOF
 }
 
 # catppuccin mocha theme

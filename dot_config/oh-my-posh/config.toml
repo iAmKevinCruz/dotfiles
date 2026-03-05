@@ -44,7 +44,7 @@ final_space = true
       style = 'powerlevel'
 
   [[blocks.segments]]
-    template = '{{ if not .Detached }} {{ if (.IsWorkTree) }}<p:peach>{{.WorktreeCount}} 󱁕</>{{ end }} {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}{{ end }} <p:blue>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>{{ end }}'
+    template = '{{ if and (not .Detached) (ne .HEAD "(null)") }} {{ if (.IsWorkTree) }}<p:peach>{{.WorktreeCount}} 󱁕</>{{ end }} {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}{{ end }} <p:blue>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>{{ end }}'
     foreground = 'p:lavender'
     background = 'transparent'
     type = 'git'
