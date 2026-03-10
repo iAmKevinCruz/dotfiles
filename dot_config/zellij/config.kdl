@@ -255,7 +255,7 @@ plugins {
   configuration location="zellij:configuration"
   plugin-manager location="zellij:plugin-manager"
   about location="zellij:about"
-  zjsessions location="file:~/projects/zellij-plugins/zjsessions/target/wasm32-wasip1/debug/zjsessions.wasm"
+  // zjsessions location="file:~/projects/zellij-plugins/zjsessions/target/wasm32-wasip1/debug/zjsessions.wasm"
 }
 
 load_plugins {

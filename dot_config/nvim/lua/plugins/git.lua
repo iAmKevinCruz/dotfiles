@@ -114,6 +114,23 @@ return {
   },
 
   {
+    "clabby/difftastic.nvim",
+    dependencies = {
+      "MunifTanjim/nui.nvim",
+      -- optional: only needed for :DifftPick
+      "folke/snacks.nvim",
+    },
+    config = function()
+      require("difftastic-nvim").setup({
+        download = true, -- Auto-download pre-built binary
+        snacks_picker = {
+          enabled = true,
+        },
+      })
+    end,
+  },
+
+  {
     "NeogitOrg/neogit",
     event = "VeryLazy",
     lazy = false,
@@ -146,5 +163,169 @@ return {
     -- config = function()
     --   require('lazyjj').setup()
     -- end
+  },
+
+  {
+    "mrdwarf7/lazyjui.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim"
+    },
+    keys = {
+      {
+        -- Default is <Leader>jj
+        -- An example of a custom mapping to open the interface
+        "<Leader>lj",
+        function()
+          require("lazyjui").open()
+        end,
+      },
+    },
+    -- You can also simply pass `opts = true` or `opts = {}` and the default options will be used
+    ---@type lazyjui.Opts
+    opts =  {
+      -- Optionally (default):
+      border = {
+        chars = { "", "", "", "", "", "", "", "" }, -- either set all to empty to remove the entire outer border (or nil/{})
+        -- Use custom set of border chars (must be 8 long)
+        -- border_chars = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
+        thickness = 0, -- This handles the border of the 'outer' window it's nested inside, generally this is invisible
+        -- See `:h nvim_win_set_hl_ns()` and associated docs for more details
+        -- previous option was: "FloatBorder:LazyJuiBorder,NormalFloat:LazyJuiFloat", -- up to you how to set
+        winhl_str = "",
+      },
+
+      -- The below options will now produce a warning advising to use the above syntax instead.
+      -- they'll work for a while; but note that the internal mapping will be removed in the future.
+      ---@deprecated use 'opts.border.chars' instead
+      -- border_chars = {},
+      ---@deprecated use 'opts.border.thickness' instead
+      -- border_thickness = 0,
+      ---@deprecated use 'opts.border.winhl_str' instead
+      -- border_winhl_str = "FloatBorder:LazyJuiBorder,NormalFloat:LazyJuiFloat",
+
+      -- Support for custom command pass-through
+      -- In this example, we use the revset `all()` command
+      --
+      -- Will default to just `jjui`
+      cmd = { "jjui" },
+      height = 0.8, -- default is 0.8,
+      width = 0.9, -- default is 0.9,
+      winblend = 0, -- default is 0 (fully opaque). Set to 100 for fully transparent (not recommended though).
+      -- hide_only = false, -- This is **experimental** and is subject to changing, currently not available
+      use_default_keymaps = true, -- setting this to false will result in no default mappings at all
+    }
+  },
+
+  {
+    "yannvanhalewyn/jujutsu.nvim",
+  },
+
+  {
+    "nicolasgb/jj.nvim",
+    dependencies = {
+      "folke/snacks.nvim", -- Optional, only needed if you use pickers
+
+      -- One of these two if you want to use them as your diff backend
+      "esmuellert/codediff.nvim",
+      "sindrets/diffview.nvim",
+    },
+
+    config = function()
+      local jj = require("jj")
+      jj.setup({
+        terminal = {
+          cursor_render_delay = 10, -- Adjust if cursor position isn't restoring correctly
+        },
+        diff = {
+          backend = "codediff"
+        },
+        cmd = {
+          describe = {
+            editor = {
+              type = "buffer",
+              keymaps = {
+                close = { "q", "<Esc>", "<C-c>" }, -- Enable <Esc> in the editor
+              }
+            }
+          },
+          bookmark = {
+            prefix = "feat/"
+          },
+          keymaps = {
+            log = {
+              checkout = "<CR>",
+              describe = "d",
+              diff = "<S-d>",
+              abandon = "<S-a>",
+              fetch = "<S-f>",
+            },
+            status = {
+              open_file = "<CR>",
+              restore_file = "<S-x>",
+            },
+            close = { "q", "<Esc>" },
+          },
+        },
+        highlights = {
+          -- Customize colors if desired
+          modified = { fg = "#89ddff" },
+        }
+      })
+
+
+
+      -- Core commands
+      local cmd = require("jj.cmd")
+      vim.keymap.set("n", "<leader>jd", cmd.describe, { desc = "JJ describe" })
+      vim.keymap.set("n", "<leader>jl", cmd.log, { desc = "JJ log" })
+      vim.keymap.set("n", "<leader>je", cmd.edit, { desc = "JJ edit" })
+      vim.keymap.set("n", "<leader>jn", cmd.new, { desc = "JJ new" })
+      vim.keymap.set("n", "<leader>js", cmd.status, { desc = "JJ status" })
+      vim.keymap.set("n", "<leader>sj", cmd.squash, { desc = "JJ squash" })
+      vim.keymap.set("n", "<leader>ju", cmd.undo, { desc = "JJ undo" })
+      vim.keymap.set("n", "<leader>jy", cmd.redo, { desc = "JJ redo" })
+      vim.keymap.set("n", "<leader>jr", cmd.rebase, { desc = "JJ rebase" })
+      vim.keymap.set("n", "<leader>jbc", cmd.bookmark_create, { desc = "JJ bookmark create" })
+      vim.keymap.set("n", "<leader>jbd", cmd.bookmark_delete, { desc = "JJ bookmark delete" })
+      vim.keymap.set("n", "<leader>jbm", cmd.bookmark_move, { desc = "JJ bookmark move" })
+      vim.keymap.set("n", "<leader>jts", cmd.tag_set, { desc = "JJ tag set" })
+      vim.keymap.set("n", "<leader>jtd", cmd.tag_delete, { desc = "JJ tag delete" })
+      vim.keymap.set("n", "<leader>jtp", cmd.tag_push, { desc = "JJ tag push" })
+      vim.keymap.set("n", "<leader>ja", cmd.abandon, { desc = "JJ abandon" })
+      vim.keymap.set("n", "<leader>jf", cmd.fetch, { desc = "JJ fetch" })
+      vim.keymap.set("n", "<leader>jp", cmd.push, { desc = "JJ push" })
+      vim.keymap.set("n", "<leader>jpr", cmd.open_pr, { desc = "JJ open PR from bookmark in current revision or parent" })
+      vim.keymap.set("n", "<leader>jpl", function()
+        cmd.open_pr { list_bookmarks = true }
+      end, { desc = "JJ open PR listing available bookmarks" })
+
+
+      -- Diff commands
+      local diff = require("jj.diff")
+      vim.keymap.set("n", "<leader>df", function() diff.open_vdiff() end, { desc = "JJ diff current buffer" })
+      vim.keymap.set("n", "<leader>dF", function() diff.open_hsplit() end, { desc = "JJ hdiff current buffer" })
+
+      -- Pickers
+      local picker = require("jj.picker")
+      vim.keymap.set("n", "<leader>gj", function() picker.status() end, { desc = "JJ Picker status" })
+      vim.keymap.set("n", "<leader>jgh", function() picker.file_history() end, { desc = "JJ Picker history" })
+
+      -- Some functions like `log` can take parameters
+      vim.keymap.set("n", "<leader>jL", function()
+        cmd.log {
+          revisions = "'all()'", -- equivalent to jj log -r ::
+        }
+      end, { desc = "JJ log all" })
+
+
+      -- This is an alias i use for moving bookmarks its so good
+      vim.keymap.set("n", "<leader>jt", function()
+        cmd.j "tug"
+        cmd.log {}
+      end, { desc = "JJ tug" })
+
+    end,
+
   }
+
 }

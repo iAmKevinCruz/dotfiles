@@ -59,7 +59,7 @@ zz() {
 }
 
 # search branches (including remote) and add them as new wt in the bare wt root
-wta() {
+wtta() {
   local initial_query="$1"
 
   local branches branch branch_name worktree_path bare_repo_root worktree_dir branch_path navigate
@@ -105,7 +105,7 @@ wta() {
 }
 
 # fzf list the worktrees in bare repo. Zoxide into selection
-wt() {
+wtt() {
   local is_bare_repo=$(git rev-parse --is-bare-repository)
   
   # get 1st argument
@@ -148,6 +148,19 @@ _ws_root() {
   return 1
 }
 
+# Check that the repo is in bare layout (no default workspace)
+_ws_require_bare() {
+  local root="$1"
+  local names
+  names=$(_ws_names "$root")
+  if echo "$names" | grep -qx 'default'; then
+    echo "Error: this repo is not in bare layout (default workspace exists)." >&2
+    echo "Run 'ws init' first to convert to bare layout." >&2
+    return 1
+  fi
+  return 0
+}
+
 # Get workspace names, one per line
 _ws_names() {
   local root="$1"
@@ -163,9 +176,28 @@ _ws_path() {
 ws() {
   local subcmd="${1:-}"
 
+  # Top-level help
   case "$subcmd" in
-    -h|--help|help) _ws_help ;;
-    init)   shift; _ws_init "$@" ;;
+    -h|--help|help) _ws_help; return ;;
+  esac
+
+  # Per-command help: ws <cmd> -h|--help
+  if [[ "${2:-}" == -h || "${2:-}" == --help ]]; then
+    _ws_cmd_help "$subcmd"
+    return
+  fi
+
+  # Commands that don't require bare layout
+  case "$subcmd" in
+    init) shift; _ws_init "$@"; return ;;
+  esac
+
+  # All other commands require bare layout
+  local root
+  root=$(_ws_root) || return 1
+  _ws_require_bare "$root" || return 1
+
+  case "$subcmd" in
     create) shift; _ws_create "$@" ;;
     list)   shift; _ws_list "$@" ;;
     remove) shift; _ws_remove "$@" ;;
@@ -202,6 +234,205 @@ Commands:
 
 Run 'ws <command> -h' for command-specific help.
 EOF
+}
+
+_ws_cmd_help() {
+  case "$1" in
+    init)
+      cat <<'EOF'
+ws init — Convert repo to bare layout
+
+Usage: ws init
+
+Converts a jj repo to bare layout where the root directory stays clean
+(only .jj/ and .git/) and all work happens in workspace subdirectories.
+
+If external workspaces exist, prompts to migrate, remove, or skip each one.
+Safe and idempotent — does nothing if already initialized.
+
+Commands run:
+  jj new 'root()'              # Clear files from root
+  jj workspace forget default   # Remove default workspace
+  jj workspace forget <name>    # (migrate) Forget old workspace
+  jj workspace add <path>       # (migrate) Re-add at new path in repo root
+
+Undo: prints 'jj op restore <id>' after completion.
+EOF
+      ;;
+    create)
+      cat <<'EOF'
+ws create — Create a new workspace
+
+Usage:
+  ws create                              # Browse bookmarks (fzf picker)
+  ws create -f                           # Fetch first, then browse
+  ws create --remote[=<remote>]          # Browse remote branches
+  ws create <name>                       # Create on trunk (direct)
+  ws create <name> -r <rev>              # Create on specific revision
+  ws create <name> --remote=<remote>     # Fetch + track remote branch
+
+Naming: slash → dot for workspace/directory, slash kept for bookmark.
+  feature/auth → workspace: feature.auth, dir: feature.auth/, bookmark: feature/auth
+
+Commands run:
+  jj workspace add --name <ws> <path> -r <rev>
+  jj bookmark create <name> -r '<ws>@'
+  jj bookmark track <name>@<remote>      # (remote mode)
+EOF
+      ;;
+    list)
+      cat <<'EOF'
+ws list — List workspaces with status
+
+Usage: ws list
+
+Shows all workspaces with change ID, commit hash, and description.
+
+Commands run:
+  jj workspace list
+EOF
+      ;;
+    remove)
+      cat <<'EOF'
+ws remove — Remove a workspace
+
+Usage:
+  ws remove              # Open fzf picker
+  ws remove [query]      # Open picker pre-filtered
+
+Opens fzf to select a workspace, then confirms before removing.
+Deletes the workspace, its directory, and any matching bookmark.
+If you're inside the removed workspace, navigates to repo root.
+
+Commands run:
+  jj workspace forget <name>
+  jj bookmark delete <bookmark>   # If a matching bookmark exists
+  rm -rf <workspace-dir>
+EOF
+      ;;
+    rename)
+      cat <<'EOF'
+ws rename — Rename workspace, directory, and bookmark
+
+Usage: ws rename <old> <new>
+
+Atomically renames the workspace, moves its directory, and renames the
+bookmark. Both names use slash notation (e.g., feature/auth → feature/login).
+Must be run from outside the workspace being renamed.
+
+Commands run:
+  jj workspace add --name <new> <new-path> -r '<old>@'
+  jj workspace forget <old>
+  jj bookmark rename <old> <new>
+  rm -rf <old-dir>
+EOF
+      ;;
+    launch)
+      cat <<'EOF'
+ws launch — Create workspace + run command
+
+Usage: ws launch <name> <cmd> [args...]
+
+Creates the workspace if it doesn't exist (idempotent), then runs the
+command in a subshell. Doesn't change the parent shell's working directory.
+Designed for spinning up parallel AI agent workflows.
+
+Examples:
+  ws launch agent/task-1 claude "Add authentication"
+  ws launch quick-test echo "hello"
+
+Commands run:
+  jj workspace add --name <ws> <path> -r 'trunk()'
+  (cd <path> && <cmd> [args...])
+EOF
+      ;;
+    tidy)
+      cat <<'EOF'
+ws tidy — AI-assisted change organization
+
+Usage:
+  ws tidy                    # Default model (sonnet)
+  ws tidy --model=<model>    # Specific model (haiku, opus, etc.)
+
+Analyzes workspace state and proposes jj commands to organize edits into
+clean, logical revisions with proper descriptions.
+
+Flow: gather state → AI analysis → show plan → confirm → execute.
+Prints 'jj op restore <id>' for undo safety.
+
+Commands run (proposed by AI):
+  jj describe -m "..."
+  jj new
+  jj squash --into <rev>
+  jj split <paths...>
+EOF
+      ;;
+    push)
+      cat <<'EOF'
+ws push — Advance bookmark + push
+
+Usage:
+  ws push              # Push current workspace's bookmark
+  ws push [name]       # Push a specific workspace's bookmark
+
+Advances the workspace's bookmark to its current change, then pushes.
+Auto-detects current workspace from $PWD if no name given.
+Converts workspace name (dot notation) to bookmark name (slash notation).
+
+Commands run:
+  jj bookmark advance <bookmark>
+  jj git push --bookmark <bookmark>
+EOF
+      ;;
+    status)
+      cat <<'EOF'
+ws status — Overview of all workspaces
+
+Usage: ws status
+
+Shows a table of all workspaces with bookmark name, commits ahead of
+trunk, and current description.
+
+Commands run:
+  jj workspace list -T 'name ++ "\n"'
+  jj log -r '<ws>@ ~ ::trunk()' --no-graph   # Per workspace, for ahead count
+EOF
+      ;;
+    sync)
+      cat <<'EOF'
+ws sync — Fetch + rebase onto trunk
+
+Usage: ws sync
+
+Fetches from all remotes, then rebases the current workspace's change
+onto trunk(). Reports conflicts if any.
+
+Commands run:
+  jj git fetch --all-remotes
+  jj rebase -d 'trunk()'
+EOF
+      ;;
+    clean)
+      cat <<'EOF'
+ws clean — Remove merged workspaces
+
+Usage: ws clean
+
+Finds workspaces whose current change is in trunk's ancestry (already
+merged). Shows the list and asks for confirmation before removing.
+Also deletes matching bookmarks.
+
+Commands run:
+  jj log -r '<ws>@ & ::trunk()'   # Check if merged
+  jj workspace forget <name>       # Per merged workspace
+  jj bookmark delete <bookmark>    # If matching bookmark exists
+  rm -rf <workspace-dir>
+EOF
+      ;;
+    *)
+      echo "No help available for '$1'. Run 'ws help' for all commands."
+      ;;
+  esac
 }
 
 _ws_pick() {
@@ -243,13 +474,239 @@ _ws_init() {
   local names
   names=$(_ws_names "$root")
 
-  if echo "$names" | grep -qx 'default'; then
-    jj -R "$root" new 'root()' --quiet
-    jj -R "$root" workspace forget default --quiet
-    echo "Initialized bare layout: cleared root and forgot default workspace."
-  else
+  if ! echo "$names" | grep -qx 'default'; then
     echo "Already initialized (no default workspace)."
+    return 0
   fi
+
+  # Gather info
+  local change_count
+  change_count=$(jj -R "$root" log --no-pager --no-graph -r 'all() ~ root()' -T 'concat("")' 2>/dev/null | wc -l)
+
+  # Find non-default workspaces
+  local other_workspaces=()
+  while IFS= read -r name; do
+    [[ -z "$name" || "$name" == "default" ]] && continue
+    other_workspaces+=("$name")
+  done <<< "$names"
+
+  # Classify workspaces
+  local external_workspaces=() internal_workspaces=()
+  for name in "${other_workspaces[@]}"; do
+    local p
+    p=$(_ws_path "$root" "$name")
+    if [[ "$p" == "$root/$name" ]]; then
+      internal_workspaces+=("$name")
+    else
+      external_workspaces+=("$name")
+    fi
+  done
+
+  # --- Show summary ---
+  echo "━━━ ws init ━━━"
+  echo ""
+  echo "This will convert the repo to bare layout:"
+  echo "  • Project files will be cleared from the root directory"
+  echo "  • The default workspace will be forgotten"
+  if [[ "$change_count" -gt 0 ]]; then
+    echo "  • Your $change_count existing change(s) are safe — nothing is abandoned"
+  fi
+  echo ""
+
+  if [[ ${#internal_workspaces[@]} -gt 0 ]]; then
+    echo "${#internal_workspaces[@]} workspace(s) already in repo root (no action needed):"
+    for name in "${internal_workspaces[@]}"; do
+      echo "  ✓ $name"
+    done
+    echo ""
+  fi
+
+  # --- Collect migration plan for external workspaces ---
+  # Actions are collected first, executed after bare init
+  local -A ws_actions  # ws_name -> action (migrate|remove|skip)
+  local -A ws_paths    # ws_name -> current path
+  local -A ws_changes  # ws_name -> change_id
+
+  if [[ ${#external_workspaces[@]} -gt 0 ]]; then
+    echo "${#external_workspaces[@]} external workspace(s) need attention:"
+    echo ""
+    for name in "${external_workspaces[@]}"; do
+      local p desc
+      p=$(_ws_path "$root" "$name")
+      desc=$(jj -R "$root" log --no-pager --no-graph --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
+      [[ -z "$desc" ]] && desc="(no description)"
+      echo "  $name"
+      echo "    path: $p"
+      echo "    desc: $desc"
+    done
+    echo ""
+
+    for name in "${external_workspaces[@]}"; do
+      local p
+      p=$(_ws_path "$root" "$name")
+      ws_paths[$name]="$p"
+
+      echo "┌ $name"
+      echo "│ $p"
+      echo "│"
+      echo "│  [m] Migrate — move into repo root as ./$name"
+      echo "│  [r] Remove  — forget workspace and delete its directory"
+      echo "│  [s] Skip    — leave as-is (external workspace)"
+      echo "│  [q] Quit    — abort ws init"
+      echo "│"
+      echo -n "└ [m/r/s/q]: "
+      read -r choice
+
+      case "$choice" in
+        m|M)
+          if [[ -d "$root/$name" ]]; then
+            echo "  ✗ Directory './$name' already exists in repo root, will skip."
+            ws_actions[$name]="skip"
+          else
+            ws_actions[$name]="migrate"
+            # Capture change ID now while workspace still exists
+            ws_changes[$name]=$(jj -R "$root" log --no-pager --no-graph --limit 1 -r "${name}@" -T 'change_id.short()' 2>/dev/null)
+            echo "  Will migrate after init."
+          fi
+          ;;
+        r|R)
+          echo -n "  Confirm delete '$name' and its files? [y/N] "
+          read -r del_confirm
+          if [[ "$del_confirm" == [yY] ]]; then
+            ws_actions[$name]="remove"
+            echo "  Will remove after init."
+          else
+            ws_actions[$name]="skip"
+            echo "  Kept."
+          fi
+          ;;
+        s|S)
+          ws_actions[$name]="skip"
+          echo "  Skipped."
+          ;;
+        q|Q)
+          echo ""
+          echo "Aborted. No changes made."
+          return 0
+          ;;
+        *)
+          ws_actions[$name]="skip"
+          echo "  Unknown choice, skipping."
+          ;;
+      esac
+      echo ""
+    done
+  fi
+
+  # --- Final confirmation ---
+  echo -n "Proceed with bare layout init? [y/N] "
+  read -r confirm
+  if [[ "$confirm" != [yY] ]]; then
+    echo "Aborted."
+    return 0
+  fi
+
+  # Record operation ID for undo safety
+  local op_id
+  op_id=$(jj -R "$root" op log --no-pager --no-graph --limit 1 -T 'id.short() ++ "\n"' 2>/dev/null | head -1)
+
+  echo ""
+
+  # --- Phase 1: Snapshot external workspaces marked for migration ---
+  for name in "${external_workspaces[@]}"; do
+    if [[ "${ws_actions[$name]}" == "migrate" ]]; then
+      local p="${ws_paths[$name]}"
+      echo "Snapshotting '$name'..."
+      jj util snapshot -R "$p" --quiet 2>/dev/null
+    fi
+  done
+
+  # --- Phase 2: Bare init (clear root, forget default) ---
+  echo "Clearing root directory..."
+  if ! jj -R "$root" new 'root()' --quiet 2>&1; then
+    echo "Error: failed to clear root. Undo with: jj op restore $op_id" >&2
+    return 1
+  fi
+  if ! jj -R "$root" workspace forget default --quiet 2>&1; then
+    echo "Error: failed to forget default workspace. Undo with: jj op restore $op_id" >&2
+    return 1
+  fi
+  echo "✓ Bare layout initialized."
+
+  # --- Phase 3: Execute workspace actions ---
+  local had_errors=false
+
+  for name in "${external_workspaces[@]}"; do
+    local action="${ws_actions[$name]}"
+    local old_path="${ws_paths[$name]}"
+
+    case "$action" in
+      migrate)
+        local change_id="${ws_changes[$name]}"
+        local target_path="$root/$name"
+        local tmp_bm="_ws_migrate_${name//[^a-zA-Z0-9_-]/_}"
+
+        # Pin the change with a temp bookmark so jj doesn't auto-abandon it after forget
+        jj -R "$root" bookmark create "$tmp_bm" -r "$change_id" --quiet 2>/dev/null
+
+        # Forget old workspace, re-add at new path, delete old dir
+        if ! jj -R "$root" workspace forget "$name" --quiet 2>&1; then
+          echo "✗ Failed to forget workspace '$name'." >&2
+          jj -R "$root" bookmark delete "$tmp_bm" --quiet 2>/dev/null
+          had_errors=true
+          continue
+        fi
+
+        if jj -R "$root" workspace add --name "$name" "$target_path" -r "$change_id" --quiet 2>&1; then
+          [[ -d "$old_path" ]] && rm -rf "$old_path"
+          # Create a bookmark matching the workspace name (slash notation)
+          local bm_name="${name//.//}"
+          if ! jj -R "$root" bookmark list --no-pager -T 'name ++ "\n"' 2>/dev/null | grep -qx "$bm_name"; then
+            jj -R "$root" bookmark create "$bm_name" -r "${name}@" --quiet 2>/dev/null
+          fi
+          echo "✓ Migrated '$name' → ./$name"
+        else
+          echo "✗ Failed to migrate '$name'. Old directory kept at: $old_path" >&2
+          had_errors=true
+        fi
+
+        # Clean up temp bookmark
+        jj -R "$root" bookmark delete "$tmp_bm" --quiet 2>/dev/null
+        ;;
+      remove)
+        jj -R "$root" workspace forget "$name" --quiet 2>/dev/null
+        [[ -d "$old_path" ]] && rm -rf "$old_path"
+        echo "✓ Removed '$name'."
+        ;;
+      skip)
+        # nothing to do
+        ;;
+    esac
+  done
+
+  # --- Summary ---
+  local skipped_names=()
+  for name in "${external_workspaces[@]}"; do
+    [[ "${ws_actions[$name]}" == "skip" ]] && skipped_names+=("$name")
+  done
+
+  if [[ ${#skipped_names[@]} -gt 0 ]]; then
+    echo ""
+    echo "${#skipped_names[@]} workspace(s) left as external:"
+    for name in "${skipped_names[@]}"; do
+      echo "  · $name"
+    done
+    echo "These still work but live outside the repo root."
+    echo "You can remove them later with: ws remove"
+  fi
+
+  echo ""
+  if [[ "$had_errors" == true ]]; then
+    echo "Completed with errors. Undo everything with: jj op restore $op_id"
+  else
+    echo "Done. Undo with: jj op restore $op_id"
+  fi
+  echo "Create workspaces with 'ws create <name>' to start working."
 }
 
 _ws_create() {
@@ -667,11 +1124,11 @@ _ws_status() {
 
     # Count commits ahead of trunk
     local ahead
-    ahead=$(jj -R "$root" log --no-pager -r "trunk()..${name}@" -T 'concat("")' 2>/dev/null | wc -l)
+    ahead=$(jj -R "$root" log --no-pager --no-graph -r "trunk()..${name}@" -T 'concat("")' 2>/dev/null | wc -l)
 
     # Get description of current change
     local desc
-    desc=$(jj -R "$root" log --no-pager --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
+    desc=$(jj -R "$root" log --no-pager --no-graph --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
     [[ -z "$desc" ]] && desc="(no description)"
 
     # Truncate long descriptions
@@ -719,7 +1176,7 @@ _ws_clean() {
 
     # Check if workspace's change is in trunk's ancestry
     local is_merged
-    is_merged=$(jj -R "$root" log --no-pager -r "${name}@ & ::trunk()" -T 'change_id' 2>/dev/null)
+    is_merged=$(jj -R "$root" log --no-pager --no-graph -r "${name}@ & ::trunk()" -T 'change_id' 2>/dev/null)
     if [[ -n "$is_merged" ]]; then
       merged+=("$name")
     fi
@@ -733,7 +1190,7 @@ _ws_clean() {
   echo "Merged workspaces (safe to remove):"
   for name in "${merged[@]}"; do
     local desc
-    desc=$(jj -R "$root" log --no-pager --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
+    desc=$(jj -R "$root" log --no-pager --no-graph --limit 1 -r "${name}@" -T 'description.first_line()' 2>/dev/null)
     echo "  $name — $desc"
   done
 
@@ -792,7 +1249,7 @@ _ws_tidy() {
 
   # Record operation ID for undo safety
   local op_id
-  op_id=$(jj op log --no-pager --limit 1 -T 'id.short() ++ "\n"' 2>/dev/null | head -1)
+  op_id=$(jj op log --no-pager --no-graph --limit 1 -T 'id.short() ++ "\n"' 2>/dev/null | head -1)
 
   local prompt
   prompt=$(cat <<'PROMPT'
@@ -873,6 +1330,16 @@ PROMPT
     return 0
   fi
 
+  # Validate commands before executing
+  while IFS= read -r cmd; do
+    # Reject jj describe without -m (would open editor)
+    if echo "$cmd" | grep -q '^jj describe' && ! echo "$cmd" | grep -q -- '-m '; then
+      echo "Error: refusing to run 'jj describe' without -m flag (would open editor)." >&2
+      echo "Plan command: $cmd" >&2
+      return 1
+    fi
+  done <<< "$commands"
+
   # Execute commands one at a time
   echo ""
   while IFS= read -r cmd; do
@@ -912,6 +1379,72 @@ Examples:
   ws tidy --model=haiku    Tidy with faster/cheaper model
 EOF
 }
+
+# --- ws completions ---
+
+_ws() {
+  local -a subcmds=(
+    'init:Convert fresh clone to bare layout'
+    'create:Create a new workspace'
+    'list:List workspaces with status'
+    'remove:Remove a workspace (fzf picker)'
+    'rename:Rename workspace + directory + bookmark'
+    'launch:Create workspace + run command'
+    'tidy:AI-assisted change organization'
+    'push:Advance bookmark + push'
+    'status:Overview of all workspaces'
+    'sync:Fetch + rebase onto trunk'
+    'clean:Remove merged workspaces'
+    'help:Show all commands'
+  )
+
+  # Helper: complete workspace names
+  _ws_complete_names() {
+    local root
+    root=$(_ws_root 2>/dev/null) || return
+    local -a names=("${(@f)$(jj -R "$root" workspace list --no-pager -T 'name ++ "\n"' 2>/dev/null)}")
+    compadd -X "workspace" -- "${names[@]}"
+  }
+
+  if (( CURRENT == 2 )); then
+    _describe 'ws command' subcmds
+    # Also allow bare workspace name for switching (default picker)
+    _ws_complete_names
+  else
+    case "${words[2]}" in
+      rename)
+        # Both args complete with workspace names
+        _ws_complete_names
+        ;;
+      remove|push)
+        if (( CURRENT == 3 )); then
+          _ws_complete_names
+        fi
+        ;;
+      create)
+        if (( CURRENT == 3 )); then
+          # Complete with bookmark names for workspace creation
+          local root
+          root=$(_ws_root 2>/dev/null) || return
+          local -a bmarks=("${(@f)$(jj -R "$root" bookmark list --no-pager -T 'name ++ "\n"' 2>/dev/null)}")
+          compadd -X "bookmark" -- "${bmarks[@]}"
+        fi
+        ;;
+      launch)
+        if (( CURRENT == 3 )); then
+          _ws_complete_names
+        elif (( CURRENT == 4 )); then
+          _command_names
+        fi
+        ;;
+      *)
+        _default
+        ;;
+    esac
+  fi
+}
+
+compdef _ws ws
 
 # catppuccin mocha theme
 export FZF_DEFAULT_OPTS=" \
