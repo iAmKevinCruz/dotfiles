@@ -148,17 +148,28 @@ _ws_root() {
   return 1
 }
 
-# Check that the repo is in bare layout (no default workspace)
-_ws_require_bare() {
+# Check if repo is in bare layout (no default workspace)
+# Returns 0 if bare, 1 if regular
+_ws_is_bare() {
   local root="$1"
   local names
   names=$(_ws_names "$root")
   if echo "$names" | grep -qx 'default'; then
-    echo "Error: this repo is not in bare layout (default workspace exists)." >&2
-    echo "Run 'ws init' first to convert to bare layout." >&2
     return 1
   fi
   return 0
+}
+
+# Compute the path for a new workspace based on layout
+# Bare:    $root/$ws_name           (e.g., /projects/myrepo/feature.auth)
+# Regular: $root/../$basename.$ws_name (e.g., /projects/myrepo.feature.auth)
+_ws_new_ws_path() {
+  local root="$1" ws_name="$2"
+  if _ws_is_bare "$root"; then
+    echo "$root/$ws_name"
+  else
+    echo "${root:h}/${root:t}.$ws_name"
+  fi
 }
 
 # Get workspace names, one per line
@@ -187,17 +198,11 @@ ws() {
     return
   fi
 
-  # Commands that don't require bare layout
-  case "$subcmd" in
-    init) shift; _ws_init "$@"; return ;;
-  esac
-
-  # All other commands require bare layout
   local root
   root=$(_ws_root) || return 1
-  _ws_require_bare "$root" || return 1
 
   case "$subcmd" in
+    bare)   shift; _ws_bare "$root" "$@" ;;
     create) shift; _ws_create "$@" ;;
     list)   shift; _ws_list "$@" ;;
     remove) shift; _ws_remove "$@" ;;
@@ -220,7 +225,6 @@ Usage: ws [command] [args...]
 
 Commands:
   ws [query]                       Switch workspaces (fzf picker)
-  ws init                          Convert fresh clone to bare layout
   ws create [name] [-r rev] ...    Create workspace (direct or browse mode)
   ws list                          List workspaces with status
   ws remove [query]                Remove workspace (fzf picker)
@@ -231,6 +235,7 @@ Commands:
   ws status                        Overview of all workspaces
   ws sync                          Fetch + rebase onto trunk
   ws clean                         Remove merged workspaces
+  ws bare init                     Convert repo to bare layout (optional)
 
 Run 'ws <command> -h' for command-specific help.
 EOF
@@ -238,11 +243,14 @@ EOF
 
 _ws_cmd_help() {
   case "$1" in
+    bare)
+      _ws_bare_help
+      ;;
     init)
       cat <<'EOF'
-ws init — Convert repo to bare layout
+ws bare init — Convert repo to bare layout
 
-Usage: ws init
+Usage: ws bare init
 
 Converts a jj repo to bare layout where the root directory stays clean
 (only .jj/ and .git/) and all work happens in workspace subdirectories.
@@ -435,6 +443,38 @@ EOF
   esac
 }
 
+_ws_bare() {
+  local root="$1"
+  shift
+
+  local subcmd="${1:-}"
+  case "$subcmd" in
+    -h|--help|"") _ws_bare_help; return ;;
+    init) shift; _ws_bare_init "$root" "$@" ;;
+    *)
+      echo "Unknown bare command: $subcmd" >&2
+      echo "Run 'ws bare' for available commands." >&2
+      return 1
+      ;;
+  esac
+}
+
+_ws_bare_help() {
+  cat <<'EOF'
+ws bare — Bare layout management
+
+Usage: ws bare <command>
+
+Commands:
+  ws bare init    Convert repo to bare layout (clear root, forget default workspace)
+
+A bare layout keeps the repo root clean (only .jj/ and .git/) with all work
+in workspace subdirectories. This is optional — ws works with regular repos too.
+
+Run 'ws bare init -h' for more details.
+EOF
+}
+
 _ws_pick() {
   local root
   root=$(_ws_root) || return 1
@@ -467,9 +507,15 @@ _ws_pick() {
   fi
 }
 
-_ws_init() {
-  local root
-  root=$(_ws_root) || return 1
+_ws_bare_init() {
+  local root="$1"
+  shift
+
+  # Handle help flag
+  if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+    _ws_cmd_help init
+    return 0
+  fi
 
   local names
   names=$(_ws_names "$root")
@@ -503,7 +549,7 @@ _ws_init() {
   done
 
   # --- Show summary ---
-  echo "━━━ ws init ━━━"
+  echo "━━━ ws bare init ━━━"
   echo ""
   echo "This will convert the repo to bare layout:"
   echo "  • Project files will be cleared from the root directory"
@@ -552,7 +598,7 @@ _ws_init() {
       echo "│  [m] Migrate — move into repo root as ./$name"
       echo "│  [r] Remove  — forget workspace and delete its directory"
       echo "│  [s] Skip    — leave as-is (external workspace)"
-      echo "│  [q] Quit    — abort ws init"
+      echo "│  [q] Quit    — abort ws bare init"
       echo "│"
       echo -n "└ [m/r/s/q]: "
       read -r choice
@@ -736,7 +782,8 @@ _ws_create() {
   # slash → dot for workspace name and directory, keep slash for bookmark
   local ws_name="${input//\//.}"
   local bookmark="$input"
-  local ws_path="$root/$ws_name"
+  local ws_path
+  ws_path=$(_ws_new_ws_path "$root" "$ws_name")
 
   if [[ -d "$ws_path" ]]; then
     echo "Error: directory '$ws_name' already exists." >&2
@@ -978,8 +1025,8 @@ _ws_launch() {
     # Existing workspace — resolve real path
     ws_path=$(_ws_path "$root" "$ws_name")
   else
-    # New workspace — create inside repo root (no bookmark for ephemeral launches)
-    ws_path="$root/$ws_name"
+    # New workspace — path depends on layout (bare: inside root, regular: sibling)
+    ws_path=$(_ws_new_ws_path "$root" "$ws_name")
     jj -R "$root" workspace add --name "$ws_name" "$ws_path" -r 'trunk()' --quiet
     echo "Created workspace '$ws_name'."
   fi
@@ -1028,7 +1075,8 @@ EOF
 
   local old_path
   old_path=$(_ws_path "$root" "$old_ws")
-  local new_path="$root/$new_ws"
+  local new_path
+  new_path=$(_ws_new_ws_path "$root" "$new_ws")
 
   # Must be outside the workspace being renamed
   if [[ "$PWD" == "$old_path"* ]]; then
@@ -1238,6 +1286,13 @@ _ws_tidy() {
   local jj_status jj_diff jj_log
   jj_status=$(jj st --no-pager 2>&1)
   jj_diff=$(jj diff --no-pager 2>&1)
+  # Truncate diff to avoid exceeding prompt limits (e.g. large build artifacts)
+  local max_diff_lines=500
+  local diff_lines
+  diff_lines=$(echo "$jj_diff" | wc -l)
+  if [[ $diff_lines -gt $max_diff_lines ]]; then
+    jj_diff="$(echo "$jj_diff" | head -n $max_diff_lines)"$'\n\n'"... (truncated: $diff_lines total lines, showing first $max_diff_lines. Use jj diff to see full output.)"
+  fi
   jj_log=$(jj log --no-pager --limit 10 2>&1)
 
   # Check there's something to tidy
@@ -1291,7 +1346,11 @@ PROMPT
   local rc=$?
 
   if [[ $rc -ne 0 || -z "$plan" ]]; then
-    echo "Error: failed to generate plan." >&2
+    echo "Error: failed to generate plan (exit code: $rc)." >&2
+    if [[ -n "$plan" ]]; then
+      echo "Claude output:" >&2
+      echo "$plan" >&2
+    fi
     return 1
   fi
 
@@ -1384,7 +1443,7 @@ EOF
 
 _ws() {
   local -a subcmds=(
-    'init:Convert fresh clone to bare layout'
+    'bare:Bare layout management'
     'create:Create a new workspace'
     'list:List workspaces with status'
     'remove:Remove a workspace (fzf picker)'
@@ -1412,6 +1471,12 @@ _ws() {
     _ws_complete_names
   else
     case "${words[2]}" in
+      bare)
+        if (( CURRENT == 3 )); then
+          local -a bare_subcmds=('init:Convert repo to bare layout')
+          _describe 'bare command' bare_subcmds
+        fi
+        ;;
       rename)
         # Both args complete with workspace names
         _ws_complete_names
