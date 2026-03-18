@@ -9,6 +9,22 @@ vim.keymap.set(
   { silent = true, buffer = bufnr }
 ) ]]
 
+-- Rustaceanvim manages rust-analyzer directly (not through lspconfig/mason).
+-- The empty handler in lsp.lua ['rust_analyzer'] = function() end prevents
+-- mason-lspconfig from also starting rust-analyzer (which causes duplicates).
+vim.g.rustaceanvim = {
+  server = {
+    settings = {
+      ['rust-analyzer'] = {
+        -- Use clippy instead of cargo check for richer diagnostics.
+        check = {
+          command = 'clippy',
+        },
+      },
+    },
+  },
+}
+
 return {
   {
     'mrcjkb/rustaceanvim',

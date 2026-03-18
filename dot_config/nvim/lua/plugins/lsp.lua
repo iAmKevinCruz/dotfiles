@@ -42,13 +42,13 @@ return {
         },
         handlers = {
           function(server_name) -- default handler (optional)
+            -- rustaceanvim owns rust-analyzer — never let mason-lspconfig start it.
+            if server_name == 'rust_analyzer' then return end
 
             require("lspconfig")[server_name].setup {
               capabilities = capabilities,
             }
           end,
-
-          ['rust_analyzer'] = function() end,
 
           ["lua_ls"] = function()
             lspconfig.lua_ls.setup {
