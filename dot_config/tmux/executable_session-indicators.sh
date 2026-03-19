@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generates session indicators for tmux status bar
-# Shows first letter of each session, active one is bright
+# Shows first 2 letters of each session, active one is bright
 
 current="$1"
 bg="#0B0E14"
@@ -9,8 +9,8 @@ bright="#BFBDB6"
 
 output=""
 while IFS= read -r session; do
-  letter="${session:0:1}"
-  letter="$(echo "$letter" | tr '[:lower:]' '[:upper:]')"
+  letter="${session:0:2}"
+  letter="$(echo "$letter" | tr '[:upper:]' '[:lower:]')"
   if [ "$session" = "$current" ]; then
     output+="#[fg=$bright,bg=$bg,bold]$letter#[nobold]"
   else
