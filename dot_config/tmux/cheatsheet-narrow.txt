@@ -5,6 +5,8 @@
  ────────
  prefix + d     Detach
  prefix + s     List sessions
+                (sorted by name)
+ prefix + S     Pick & rename
  prefix + $     Rename session
  prefix + (     Prev session
  prefix + )     Next session
@@ -38,7 +40,7 @@
 
  RESIZE PANES
  ────────────
- prefix + C-Up/Down/Left/Right
+ prefix + Shift+Arrows  (repeat)
 
  SESH
  ────
@@ -72,3 +74,23 @@
  :new-session -s name
  :kill-session
  prefix + w -> x  Kill from tree
+
+ CHOOSE-TREE (prefix+s / prefix+w)
+ ──────────────────────────────────
+ Enter   Choose selected
+ Up/Down Navigate
+ x       Kill selected
+ X       Kill tagged
+ t       Tag/untag item
+ T       Untag all
+ C-t     Tag all
+ :       Cmd for tagged
+ C-s     Search by name
+ n       Repeat last search
+ f       Filter by format
+ O       Change sort field
+ r       Reverse sort order
+ v       Toggle preview
+ < >     Scroll preview
+ R       Rename selected
+ q       Exit

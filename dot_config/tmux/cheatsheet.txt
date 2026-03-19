@@ -5,12 +5,14 @@
  ────────                          ───────
  prefix + d     Detach             prefix + c     New window
  prefix + s     List sessions      prefix + &     Kill window
- prefix + $     Rename session     prefix + ,     Rename window
- prefix + (     Prev session       Alt + n        Next window
- prefix + )     Next session       Alt + p        Prev window
- Alt + N        Next session       prefix + 0-9   Go to window #
- Alt + P        Prev session       Ctrl+Shift+←   Move window left
- prefix + w     Session/window     Ctrl+Shift+→   Move window right
+               (sorted by name)    prefix + ,     Rename window
+ prefix + S     Pick & rename
+ prefix + $     Rename session     Alt + n        Next window
+ prefix + (     Prev session       Alt + p        Prev window
+ prefix + )     Next session       prefix + 0-9   Go to window #
+ Alt + N        Next session       Ctrl+Shift+←   Move window left
+ Alt + P        Prev session       Ctrl+Shift+→   Move window right
+ prefix + w     Session/window
                 tree view
 
  PANES                             SESH
@@ -37,4 +39,16 @@
                                    :new-session -s name
  RESIZE PANES                      :kill-session
  ────────────                      prefix + w -> x  Kill from tree
- prefix + C-Up/Down/Left/Right
+ prefix + Shift+Arrows  (repeat)
+
+ CHOOSE-TREE (prefix + s / prefix + w)
+ ──────────────────────────────────────
+ Enter          Choose selected     C-s    Search by name
+ Up/Down        Navigate            n      Repeat last search
+ x              Kill selected       f      Filter by format
+ X              Kill tagged         O      Change sort field
+ t              Tag/untag item      r      Reverse sort order
+ T              Untag all           v      Toggle preview
+ C-t            Tag all             < >    Scroll preview
+ :              Cmd for tagged      R      Rename selected
+ q              Exit
