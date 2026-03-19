@@ -18,6 +18,8 @@
  Alt + n        Next window
  Alt + p        Prev window
  prefix + 0-9   Go to window #
+ Ctrl+Shift+←   Move window left
+ Ctrl+Shift+→   Move window right
 
  PANES
  ─────

@@ -9,7 +9,8 @@
  prefix + (     Prev session       Alt + n        Next window
  prefix + )     Next session       Alt + p        Prev window
  prefix + w     Session/window     prefix + 0-9   Go to window #
-                tree view
+                tree view          Ctrl+Shift+←   Move window left
+                                   Ctrl+Shift+→   Move window right
 
  PANES                             SESH
  ─────                             ────
