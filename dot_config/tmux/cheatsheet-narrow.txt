@@ -1,0 +1,70 @@
+       TMUX CHEATSHEET
+       ══════════════
+
+ SESSIONS
+ ────────
+ prefix + d     Detach
+ prefix + s     List sessions
+ prefix + $     Rename session
+ prefix + (     Prev session
+ prefix + )     Next session
+ prefix + w     Tree view
+
+ WINDOWS
+ ───────
+ prefix + c     New window
+ prefix + &     Kill window
+ prefix + ,     Rename window
+ Alt + n        Next window
+ Alt + p        Prev window
+ prefix + 0-9   Go to window #
+
+ PANES
+ ─────
+ prefix + |     Split horizontal
+ prefix + -     Split vertical
+ prefix + x     Kill pane
+ prefix + z     Toggle zoom
+ Alt + z        Toggle zoom
+ Alt + Arrows   Navigate panes
+ prefix + {     Swap pane left
+ prefix + }     Swap pane right
+ prefix + q     Show pane numbers
+ prefix + !     Pane -> window
+
+ RESIZE PANES
+ ────────────
+ prefix + C-Up/Down/Left/Right
+
+ SESH
+ ────
+ prefix + t     Sessions (fzf)
+ prefix + T     Sessions+windows
+ Alt + w        Sessions (fzf)
+ Alt + W        Sessions+windows
+
+ RESURRECT
+ ─────────
+ prefix + C-s   Save session
+ prefix + C-r   Restore session
+
+ COPY MODE
+ ─────────
+ prefix + [     Enter copy mode
+ q              Exit copy mode
+ /              Search forward
+ ?              Search backward
+ Space          Start selection
+ Enter          Copy selection
+
+ OTHER
+ ─────
+ prefix + r     Reload config
+ prefix + :     Command prompt
+ prefix + ?     This cheatsheet
+
+ CREATE/KILL SESSIONS
+ ────────────────────
+ :new-session -s name
+ :kill-session
+ prefix + w -> x  Kill from tree

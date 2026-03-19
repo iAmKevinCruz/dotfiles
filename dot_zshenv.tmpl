@@ -1,0 +1,14 @@
+# .zshenv - runs for ALL shell types (interactive, non-interactive, login, script)
+# Keep this minimal — only PATH and env vars needed by non-interactive shells
+
+{{ if eq .chezmoi.os "linux" -}}
+# Linuxbrew
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+{{ end -}}
+
+{{ if eq .chezmoi.os "darwin" -}}
+eval "$(/opt/homebrew/bin/brew shellenv)"
+{{ end -}}
+
+# Cargo/Rust
+. "$HOME/.cargo/env"

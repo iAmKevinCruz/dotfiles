@@ -105,7 +105,7 @@ alias jjconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/jj)" -c Oil'
 alias ghdashconfig="v ~/.config/gh-dash/config.yml"
 alias weztermconfig="v ~/.config/wezterm/wezterm.lua"
 alias kittyconfig="v ~/.config/kitty/kitty.conf"
-alias tmuxconfig="v ~/.config/tmux/"
+alias tmuxconfig='nvim --cmd "cd $(chezmoi source-path ~/.config/tmux)" -c Oil'
 alias sshsconfig="v ~/.ssh/config"
 alias rainfrogconfig="v ~/.config/rainfrog/rainfrog_config.toml"
 alias superfileconfig="v ~/.config/superfile"
@@ -278,3 +278,5 @@ export PATH="$HOME/.opencode/bin:$PATH"
 
 # Load NVM and use LTS
 [ -s "$NVM_DIR/nvm.sh" ] && source ~/.nvm/nvm.sh && nvm use --lts 2>/dev/null
+
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
