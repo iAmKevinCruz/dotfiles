@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Generates session indicators for tmux status bar
-# Shows first 2 letters of each session name, active one is bright
+# Format: "sessionname | co is pr *wo*"
+# Active session is bright/bold, others are dim
 # Supports numbered sessions: "1: prism" -> sorted by number, displays "pr"
 
 current="$1"
@@ -8,9 +9,10 @@ bg="#0B0E14"
 dim="#475266"
 bright="#BFBDB6"
 
-output=""
+indicators=""
+first=true
 while IFS= read -r session; do
-  # Strip "N: " prefix if present, keep original for matching
+  # Strip "N: " prefix if present
   name="$session"
   if [[ "$session" =~ ^[0-9]+:\ (.+)$ ]]; then
     name="${BASH_REMATCH[1]}"
@@ -19,12 +21,14 @@ while IFS= read -r session; do
   label="${name:0:2}"
   label="$(echo "$label" | tr '[:upper:]' '[:lower:]')"
 
+  $first || indicators+=" "
+  first=false
+
   if [ "$session" = "$current" ]; then
-    output+="#[fg=$bright,bg=$bg,bold]$label#[nobold]"
+    indicators+="#[fg=$bright,bg=$bg,bold]$label#[fg=$dim,bg=$bg,nobold]"
   else
-    output+="#[fg=$dim,bg=$bg]$label"
+    indicators+="#[fg=$dim,bg=$bg]$label"
   fi
-  output+=" "
 done < <(tmux list-sessions -F '#S' 2>/dev/null | sort)
 
-echo "$output"
+echo "$indicators"
