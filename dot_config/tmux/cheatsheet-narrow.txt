@@ -8,6 +8,8 @@
  prefix + $     Rename session
  prefix + (     Prev session
  prefix + )     Next session
+ Alt + N        Next session
+ Alt + P        Prev session
  prefix + w     Tree view
 
  WINDOWS
