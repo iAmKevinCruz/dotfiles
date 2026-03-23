@@ -1,0 +1,19 @@
+[metadata]
+name = "chezmoi"
+description = "Browse chezmoi-managed dotfiles"
+requirements = ["chezmoi"]
+
+[source]
+command = ["chezmoi managed"]
+output = "{}"
+
+[preview]
+command = "chezmoi cat \"$HOME/{0}\" 2>/dev/null || cat \"$HOME/{0}\""
+
+[keybindings]
+enter = "actions:edit"
+
+[actions.edit]
+description = "Edit file in chezmoi source"
+command = "chezmoi edit --apply \"$HOME/{0}\""
+mode = "execute"

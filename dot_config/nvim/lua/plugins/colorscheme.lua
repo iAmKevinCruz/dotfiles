@@ -284,7 +284,45 @@ return {
           },
         },
       })
-      vim.cmd('colorscheme onenord')
+      -- vim.cmd('colorscheme onenord')
+    end,
+  },
+
+  {
+    "danfry1/lume",
+    lazy = false,
+    priority = 1000,
+    config = function()
+      require("lume").setup({})
+
+      local function apply_lume_highlights()
+        if vim.g.colors_name ~= "lume" then return end
+        local hl = vim.api.nvim_set_hl
+        hl(0, "Normal",              { bg = "#1E1F2E" })
+        hl(0, "NormalNC",            { bg = "#1E1F2E" })
+        hl(0, "MiniFilesNormal",     { bg = "#1E1F2E" })
+        hl(0, "MiniDiffSignDelete",  { fg = "#BF616A" })
+        hl(0, "MiniDiffSignChange",  { fg = "#EBCB8B" })
+        hl(0, "MiniDiffSignAdd",     { fg = "#A3BE8C" })
+        hl(0, "RainbowDark",         { fg = "#2E2E31" })
+        hl(0, "RainbowBrown",        { fg = "#272E34" })
+        hl(0, "RainbowPeach",        { fg = "#2D253C" })
+        hl(0, "RainbowLightGreen",   { fg = "#252C3B" })
+        hl(0, "RainbowDelimiterRed", { fg = "#d57780" })
+      end
+
+      -- Re-apply on future colorscheme changes (deferred so we run last)
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        pattern = "*",
+        group = vim.api.nvim_create_augroup("LumeCustomHighlights", { clear = true }),
+        callback = function()
+          vim.schedule(apply_lume_highlights)
+        end,
+      })
+
+      vim.cmd("colorscheme lume")
+      -- Deferred so it runs after all other plugin configs finish
+      vim.schedule(apply_lume_highlights)
     end,
   },
 
