@@ -1,19 +1,19 @@
 [metadata]
 name = "chezmoi"
-description = "Browse chezmoi-managed dotfiles"
+description = "Browse chezmoi-managed directories and open in nvim"
 requirements = ["chezmoi"]
 
 [source]
-command = ["chezmoi managed"]
+command = ["chezmoi managed -i dirs"]
 output = "{}"
 
 [preview]
-command = "chezmoi cat \"$HOME/{0}\" 2>/dev/null || cat \"$HOME/{0}\""
+command = "ls -1 --color=always \"$HOME/{0}\""
 
 [keybindings]
-enter = "actions:edit"
+enter = "actions:open"
 
-[actions.edit]
-description = "Edit file in chezmoi source"
-command = "chezmoi edit --apply \"$HOME/{0}\""
+[actions.open]
+description = "Open directory in nvim"
+command = "nvim \"$HOME/{0}\""
 mode = "execute"
