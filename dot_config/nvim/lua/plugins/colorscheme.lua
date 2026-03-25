@@ -309,6 +309,7 @@ return {
         hl(0, "RainbowPeach",        { fg = "#2D253C" })
         hl(0, "RainbowLightGreen",   { fg = "#252C3B" })
         hl(0, "RainbowDelimiterRed", { fg = "#d57780" })
+        hl(0, "Visual",              { bg = "#443d60" })
       end
 
       -- Re-apply on future colorscheme changes (deferred so we run last)
@@ -325,6 +326,7 @@ return {
       vim.schedule(apply_lume_highlights)
     end,
   },
+
 
   {
     'projekt0n/github-nvim-theme',
