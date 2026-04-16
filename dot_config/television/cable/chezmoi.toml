@@ -15,5 +15,5 @@ enter = "actions:open"
 
 [actions.open]
 description = "Open directory in nvim"
-command = "nvim \"$HOME/{0}\""
+command = "cd \"$(chezmoi source-path \"$HOME/{0}\")\" && nvim -c Oil"
 mode = "execute"

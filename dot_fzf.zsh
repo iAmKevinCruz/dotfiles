@@ -134,12 +134,20 @@ wtt() {
 
 # --- ws: JJ Workspace Manager ---
 
-# Find the true repo root (where .jj/repo/ lives)
+# Find the true repo root (where .jj/repo/ lives as a real directory, not a pointer file)
 _ws_root() {
   local dir="$PWD"
   while [[ "$dir" != "/" ]]; do
     if [[ -d "$dir/.jj/repo" ]]; then
+      # Real repo root — .jj/repo is a directory
       echo "$dir"
+      return 0
+    elif [[ -f "$dir/.jj/repo" ]]; then
+      # Workspace subdir — .jj/repo is a file pointing to the real repo
+      local pointer
+      pointer=$(<"$dir/.jj/repo")
+      # Resolve the relative path to get the true root
+      echo "$(cd "$dir/.jj" && cd "$(dirname "$pointer")/.." && pwd)"
       return 0
     fi
     dir="${dir:h}"
