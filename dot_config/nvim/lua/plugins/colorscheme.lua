@@ -284,7 +284,7 @@ return {
           },
         },
       })
-      -- vim.cmd('colorscheme onenord')
+      vim.cmd('colorscheme onenord')
     end,
   },
 
@@ -323,7 +323,7 @@ return {
 
       vim.cmd("colorscheme lume")
       -- Deferred so it runs after all other plugin configs finish
-      vim.schedule(apply_lume_highlights)
+      -- vim.schedule(apply_lume_highlights)
     end,
   },
 
