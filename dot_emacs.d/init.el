@@ -1142,9 +1142,14 @@
 ;; on-disk format (org-id, PROPERTIES drawers). In-memory hash tables,
 ;; no SQLite. org-roam kept installed below during transition; remove
 ;; once confident. See keybinds further down for usage.
+;; truename-cache is a hard dep of org-mem not yet in MELPA recipes.
+(use-package truename-cache
+  :ensure t
+  :straight (truename-cache :type git :host github :repo "meedstrom/truename-cache"))
+
 (use-package org-mem
   :ensure t
-  :straight t
+  :straight (org-mem :type git :host github :repo "meedstrom/org-mem")
   :config
   (setq org-mem-watch-dirs '("~/org"))
   (setq org-mem-do-sync-with-org-id t)
@@ -1152,7 +1157,7 @@
 
 (use-package org-node
   :ensure t
-  :straight t
+  :straight (org-node :type git :host github :repo "meedstrom/org-node")
   :after org-mem
   :config
   (org-node-cache-mode)
