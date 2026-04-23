@@ -1167,6 +1167,9 @@
   (setq org-node-backlink-drawer-sort-in-reverse t)
   ;; Context buffer: collapse groups with many backlinks (default 5).
   (setq org-node-context-collapse-more-than 5)
+  ;; Extract/new-node destination: prompt each time. read-directory-name
+  ;; defaults to the source file's dir, so Enter = sibling, navigate for else.
+  (setq org-node-file-directory-ask t)
   ;; Note: org-node-roam-accelerator-mode intentionally omitted. It requires
   ;; org-roam loaded before org-node :config runs, which breaks init. Files
   ;; are already cross-compatible via org-id, so no accelerator needed.
