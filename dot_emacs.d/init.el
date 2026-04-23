@@ -1171,8 +1171,9 @@
   (setq org-node-seq-defs
         (list (org-node-seq-def-on-filepath-sort-by-basename
                "d"
+               "Daily"
                (expand-file-name "~/org/Timestamps/Journal/")
-               "%Y-%m-%d" "%Y-%m-%d %A")))
+               nil t)))
   (org-node-seq-mode))
 
 (defun ek/org-node-daily-today ()
