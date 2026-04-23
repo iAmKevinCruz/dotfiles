@@ -1162,9 +1162,9 @@
   :config
   (org-node-cache-mode)
   (org-node-backlink-mode)
-  ;; Coexistence with org-roam during transition
-  (org-node-roam-accelerator-mode)
-  (setq org-node-creation-fn #'org-node-new-via-roam-capture)
+  ;; Note: org-node-roam-accelerator-mode intentionally omitted. It requires
+  ;; org-roam loaded before org-node :config runs, which breaks init. Files
+  ;; are already cross-compatible via org-id, so no accelerator needed.
   (setq org-node-file-slug-fn #'org-node-slugify-like-roam-default)
   ;; Daily notes sequence: files in Timestamps/Journal named YYYY-MM-DD
   (require 'org-node-seq)
