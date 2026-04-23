@@ -1151,7 +1151,7 @@
   :ensure t
   :straight (org-mem :type git :host github :repo "meedstrom/org-mem")
   :config
-  (setq org-mem-watch-dirs '("~/org"))
+  (setq org-mem-watch-dirs (list (expand-file-name "~/org")))
   (setq org-mem-do-sync-with-org-id t)
   (org-mem-updater-mode))
 
@@ -1170,7 +1170,9 @@
   (require 'org-node-seq)
   (setq org-node-seq-defs
         (list (org-node-seq-def-on-filepath-sort-by-basename
-               "d" "~/org/Timestamps/Journal/" "%Y-%m-%d" "%Y-%m-%d %A")))
+               "d"
+               (expand-file-name "~/org/Timestamps/Journal/")
+               "%Y-%m-%d" "%Y-%m-%d %A")))
   (org-node-seq-mode))
 
 (defun ek/org-node-daily-today ()
