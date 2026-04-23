@@ -1137,6 +1137,47 @@
   (eval-after-load 'js-mode
     '(add-hook 'js-mode-hook #'add-node-modules-path)))
 
+;;; ORG-MEM + ORG-NODE
+;; Faster replacement for org-roam. Drop-in compatible with org-roam's
+;; on-disk format (org-id, PROPERTIES drawers). In-memory hash tables,
+;; no SQLite. org-roam kept installed below during transition; remove
+;; once confident. See keybinds further down for usage.
+(use-package org-mem
+  :ensure t
+  :straight t
+  :config
+  (setq org-mem-watch-dirs '("~/org"))
+  (setq org-mem-do-sync-with-org-id t)
+  (org-mem-updater-mode))
+
+(use-package org-node
+  :ensure t
+  :straight t
+  :after org-mem
+  :config
+  (org-node-cache-mode)
+  (org-node-backlink-mode)
+  ;; Coexistence with org-roam during transition
+  (org-node-roam-accelerator-mode)
+  (setq org-node-creation-fn #'org-node-new-via-roam-capture)
+  (setq org-node-file-slug-fn #'org-node-slugify-like-roam-default)
+  ;; Daily notes sequence: files in Timestamps/Journal named YYYY-MM-DD
+  (require 'org-node-seq)
+  (setq org-node-seq-defs
+        (list (org-node-seq-def-on-filepath-sort-by-basename
+               "d" "~/org/Timestamps/Journal/" "%Y-%m-%d" "%Y-%m-%d %A")))
+  (org-node-seq-mode))
+
+(defun ek/org-node-daily-today ()
+  "Jump to today's daily note via org-node sequence."
+  (interactive)
+  (org-node-seq-goto "d" (format-time-string "%Y-%m-%d")))
+
+(defun ek/org-node-daily-goto-date ()
+  "Prompt for date, jump to that daily via org-node sequence."
+  (interactive)
+  (org-node-seq-goto "d" (org-read-date)))
+
 (use-package org-roam
   :ensure t
   :init
@@ -1240,15 +1281,18 @@
     (kbd "C-d") 'evil-scroll-down
     (kbd "C-u") 'evil-scroll-up)
 
-  ;; Org-Roam keybindings
-  (evil-define-key 'normal 'global (kbd "<leader> n l") 'org-roam-buffer-toggle)
-  (evil-define-key 'normal 'global (kbd "<leader> n f") 'org-roam-node-find)
-  (evil-define-key 'normal 'global (kbd "<leader> n i") 'org-roam-node-insert)
-  (evil-define-key 'normal 'global (kbd "<leader> n c") 'org-roam-capture)
+  ;; Org-Node keybindings (migrated from org-roam; same keys, faster backend)
+  (evil-define-key 'normal 'global (kbd "<leader> n l") 'org-node-context-dwim)
+  (evil-define-key 'normal 'global (kbd "<leader> n f") 'org-node-find)
+  (evil-define-key 'normal 'global (kbd "<leader> n i") 'org-node-insert-link)
+  (evil-define-key 'normal 'global (kbd "<leader> n c") 'org-node-capture-target)
+  (evil-define-key 'normal 'global (kbd "<leader> n r") 'org-node-refile)
+  (evil-define-key 'normal 'global (kbd "<leader> n s") 'org-node-seq-dispatch)
   (evil-define-key 'insert 'global (kbd "<M-i>") 'completion-at-point)
-  (evil-define-key 'insert 'global (kbd "C-i") 'org-roam-node-insert)
-  (evil-define-key 'normal 'global (kbd "<leader> n d d") 'org-roam-dailies-goto-date)
-  (evil-define-key 'normal 'global (kbd "<leader> n d .") 'org-roam-dailies-find-directory)
+  (evil-define-key 'insert 'global (kbd "C-i") 'org-node-insert-link)
+  (evil-define-key 'normal 'global (kbd "<leader> n d d") 'ek/org-node-daily-today)
+  (evil-define-key 'normal 'global (kbd "<leader> n d D") 'ek/org-node-daily-goto-date)
+  (evil-define-key 'normal 'global (kbd "<leader> n d .") (lambda () (interactive) (dired "~/org/Timestamps/Journal")))
 
   ;; Flymake navigation
   (evil-define-key 'normal 'global (kbd "<leader> x x") 'consult-flymake);; Gives you something like `trouble.nvim'
@@ -1875,10 +1919,22 @@
     (org-roam-db-autosync-mode)))
 
 
-;; Refresh org-agenda-files before opening agenda to pick up new files
+;; Refresh org-agenda-files from org-mem's cached file index (fast, no disk walk).
+;; Filters to only files whose first 4KB contain a TODO-state heading, which
+;; avoids scanning pure note files and shrinks the buffer list after agenda use.
+;; If filter misses a file you expect, widen the regexp or drop the seq-filter
+;; and use (org-mem-all-files) directly.
 (defun ek/refresh-org-agenda-files ()
-  "Refresh org-agenda-files by rescanning ~/org directory."
-  (setq org-agenda-files (directory-files-recursively "~/org/" "\\.org$")))
+  "Set `org-agenda-files' from org-mem cache, filtered to files with TODOs."
+  (setq org-agenda-files
+        (seq-filter
+         (lambda (f)
+           (with-temp-buffer
+             (insert-file-contents f nil 0 4096)
+             (re-search-forward
+              "^\\*+ \\(TODO\\|WIP\\|REVIEW\\|BLOCKED\\|HOLD\\|QUESTION\\) "
+              nil t)))
+         (org-mem-all-files))))
 
 ;; Hook to refresh the file list each time org-agenda is opened
 (add-hook 'org-agenda-mode-hook #'ek/refresh-org-agenda-files)
