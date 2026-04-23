@@ -1162,6 +1162,11 @@
   :config
   (org-node-cache-mode)
   (org-node-backlink-mode)
+  ;; Backlink drawer: newest first (timestamp-based).
+  (setq org-node-backlink-drawer-sorter #'org-node-backlink-timestamp-lessp)
+  (setq org-node-backlink-drawer-sort-in-reverse t)
+  ;; Context buffer: collapse groups with many backlinks (default 5).
+  (setq org-node-context-collapse-more-than 5)
   ;; Note: org-node-roam-accelerator-mode intentionally omitted. It requires
   ;; org-roam loaded before org-node :config runs, which breaks init. Files
   ;; are already cross-compatible via org-id, so no accelerator needed.
@@ -1296,6 +1301,8 @@
   (evil-define-key 'normal 'global (kbd "<leader> n c") 'org-node-capture-target)
   (evil-define-key 'normal 'global (kbd "<leader> n r") 'org-node-refile)
   (evil-define-key 'normal 'global (kbd "<leader> n s") 'org-node-seq-dispatch)
+  (evil-define-key 'normal 'global (kbd "<leader> n n") 'org-node-nodeify-entry)
+  (evil-define-key 'normal 'global (kbd "<leader> n e") 'org-node-extract-subtree)
   (evil-define-key 'insert 'global (kbd "<M-i>") 'completion-at-point)
   (evil-define-key 'insert 'global (kbd "C-i") 'org-node-insert-link)
   (evil-define-key 'normal 'global (kbd "<leader> n d d") 'ek/org-node-daily-today)
