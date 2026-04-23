@@ -147,6 +147,19 @@
 (straight-use-package '(project :type built-in))
 (straight-use-package 'use-package)
 
+;;; EXEC-PATH-FROM-SHELL
+;; macOS GUI emacs (Emacs.app, daemon launched via launchd, keybind
+;; launchers) does not inherit shell env, so PATH is missing brew/asdf
+;; binaries. Aspell, language servers, shell commands silently break.
+;; This package shells out once at startup to import PATH + selected
+;; vars from the login shell, regardless of launch method.
+(use-package exec-path-from-shell
+  :ensure t
+  :straight t
+  :if (memq window-system '(mac ns))
+  :config
+  (exec-path-from-shell-initialize))
+
 
 ;; In Emacs, a package is a collection of Elisp code that extends the editor's functionality,
 ;; much like plugins do in Neovim. We need to import this package to add package archives.
