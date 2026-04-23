@@ -338,8 +338,8 @@
       (side . bottom)
       (slot . 1))
 
-     ;; Org-roam buffer on the right side
-     ("\\*org-roam\\*"
+     ;; Org-node context buffer on the right side
+     ("\\*org-node context\\*"
       (display-buffer-in-side-window)
       (side . right)
       (window-width . 0.33))
