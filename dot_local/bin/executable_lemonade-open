@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# BROWSER wrapper → opens URL in atlas (MacBook) default browser via lemonade.
+# Used by lazygit openLink, gh, xdg-open shim, and anything honoring $BROWSER.
+exec "$HOME/go/bin/lemonade" --host=100.81.121.84 open "$@"

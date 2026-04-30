@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# xclip/xsel shim → lemonade RPC to atlas (MacBook)
+#
+# Installed as ~/.local/bin/xclip and symlinked as ~/.local/bin/xsel so TUIs
+# (lazysql, nvim, atotto/clipboard, etc.) that probe for either tool pipe
+# their clipboard through lemonade to the Mac.
+#
+# Read mode (-o / --output) returns Mac clipboard contents.
+# Write mode (no -o flag) sends stdin to Mac clipboard.
+# All -selection / -b / -p / etc. flags are ignored — lemonade has one clipboard.
+
+set -euo pipefail
+
+HOST=100.81.121.84   # atlas Tailscale IP
+LEMONADE="$HOME/go/bin/lemonade"
+
+is_read=0
+for arg in "$@"; do
+  case "$arg" in
+    -o|-out|--out|--output) is_read=1 ;;
+  esac
+done
+
+if [[ $is_read -eq 1 ]]; then
+  exec "$LEMONADE" --host="$HOST" paste
+else
+  exec "$LEMONADE" --host="$HOST" copy
+fi

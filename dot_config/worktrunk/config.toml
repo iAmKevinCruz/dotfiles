@@ -206,9 +206,12 @@
 # """
 # <!-- DEFAULT_SQUASH_TEMPLATE_END -->
 
+[alias]
+sw = "switch"
+
 worktree-path = '{{ repo_path }}/{{ branch | replace("/", ".") | replace("\\", ".") }}'
 [commit.generation]
-command = "claude -m haiku"
+command = "claude --model haiku"
 
 [list]
 summary = true

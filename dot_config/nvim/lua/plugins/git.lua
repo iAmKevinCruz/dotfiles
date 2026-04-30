@@ -220,37 +220,37 @@ return {
     "yannvanhalewyn/jujutsu.nvim",
   },
 
-  {
-    'algmyr/vcsigns.nvim',
-    event = "BufReadPost",
-    config = function()
-      require('vcsigns').setup({
-        target_commit = 1,
-        highlight_number = true,
-        signs = {
-          text = {
-            add = "",
-            change = "",
-            delete_below = "",
-            delete_above = "",
-            delete_above_below = "",
-          },
-        },
-      })
-
-      -- Link vcsigns highlight groups to MiniDiff colors
-      vim.api.nvim_set_hl(0, "SignAdd", { link = "MiniDiffSignAdd" })
-      vim.api.nvim_set_hl(0, "SignChange", { link = "MiniDiffSignChange" })
-      vim.api.nvim_set_hl(0, "SignDelete", { link = "MiniDiffSignDelete" })
-      vim.api.nvim_set_hl(0, "SignCombined", { link = "MiniDiffSignChange" })
-
-      local actions = require('vcsigns.actions')
-      vim.keymap.set('n', ']h', function() actions.hunk_next(0, vim.v.count1) end, { desc = 'Next VCS hunk' })
-      vim.keymap.set('n', '[h', function() actions.hunk_prev(0, vim.v.count1) end, { desc = 'Prev VCS hunk' })
-      vim.keymap.set('n', '<leader>hu', function() actions.hunk_undo(0) end, { desc = 'Undo VCS hunk' })
-      vim.keymap.set('n', '<leader>hd', function() actions.toggle_hunk_diff(0) end, { desc = 'Inline VCS hunk diff' })
-    end,
-  },
+  -- {
+  --   'algmyr/vcsigns.nvim',
+  --   event = "BufReadPost",
+  --   config = function()
+  --     require('vcsigns').setup({
+  --       target_commit = 1,
+  --       highlight_number = true,
+  --       signs = {
+  --         text = {
+  --           add = "",
+  --           change = "",
+  --           delete_below = "",
+  --           delete_above = "",
+  --           delete_above_below = "",
+  --         },
+  --       },
+  --     })
+  --
+  --     -- Link vcsigns highlight groups to MiniDiff colors
+  --     vim.api.nvim_set_hl(0, "SignAdd", { link = "MiniDiffSignAdd" })
+  --     vim.api.nvim_set_hl(0, "SignChange", { link = "MiniDiffSignChange" })
+  --     vim.api.nvim_set_hl(0, "SignDelete", { link = "MiniDiffSignDelete" })
+  --     vim.api.nvim_set_hl(0, "SignCombined", { link = "MiniDiffSignChange" })
+  --
+  --     local actions = require('vcsigns.actions')
+  --     vim.keymap.set('n', ']h', function() actions.hunk_next(0, vim.v.count1) end, { desc = 'Next VCS hunk' })
+  --     vim.keymap.set('n', '[h', function() actions.hunk_prev(0, vim.v.count1) end, { desc = 'Prev VCS hunk' })
+  --     vim.keymap.set('n', '<leader>hu', function() actions.hunk_undo(0) end, { desc = 'Undo VCS hunk' })
+  --     vim.keymap.set('n', '<leader>hd', function() actions.toggle_hunk_diff(0) end, { desc = 'Inline VCS hunk diff' })
+  --   end,
+  -- },
 
   {
     "nicolasgb/jj.nvim",

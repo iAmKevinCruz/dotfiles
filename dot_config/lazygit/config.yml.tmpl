@@ -1,3 +1,4 @@
+[[- /* chezmoi:template:left-delimiter=[[ right-delimiter=]] */ -]]
 # keybinding:
 #   universal:
 
@@ -41,6 +42,11 @@ quitOnTopLevelReturn: true
 
 os:
   # this will edit the file in the current neovim sesh
-  edit: "nvr -cc vsplit --remote-wait +'set bufhidden=wipe' {{filename}}" 
+  edit: "nvr -cc vsplit --remote-wait +'set bufhidden=wipe' {{filename}}"
   # edit: '~/Library/Application\ Support/lazygit/bin/nvim-dynamic-server {{filename}}'
-
+  [[- if eq .chezmoi.os "linux" ]]
+  # Route `o` (open PR/commit URL) through lemonade → atlas browser
+  openLink: 'lemonade-open {{link}}'
+  [[- else ]]
+  openLink: 'open {{link}}'
+  [[- end ]]

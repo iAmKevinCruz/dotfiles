@@ -38,3 +38,13 @@ Session.vim
 !.emacs.d/init.el
 !.emacs.d/early-init.el
 !.emacs.d/custom-vars.el
+
+# Lemonade: server plist is atlas (darwin) only; shim scripts are devbox (linux) only
+{{ if ne .chezmoi.os "darwin" -}}
+Library
+{{ end -}}
+{{ if ne .chezmoi.os "linux" -}}
+.local/bin/xclip
+.local/bin/xsel
+.local/bin/lemonade-open
+{{ end -}}
