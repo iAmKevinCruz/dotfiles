@@ -2136,6 +2136,10 @@ Navigate each independently, copy/paste between them."
     "f n" '(grease-open-independent :wk "New grease buffer")))
 
 
+;;; SPELL CHECKING
+(setq ispell-program-name "aspell")
+(setq ispell-extra-args '("--sug-mode=ultra" "--lang=en_US"))
+
 ;;; SLICK
 ;; Posframe - floating popup frames (used by slick confirmation dialog)
 (use-package posframe

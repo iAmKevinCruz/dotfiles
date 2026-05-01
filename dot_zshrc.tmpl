@@ -16,7 +16,10 @@ export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
 export PATH="/opt/homebrew/opt/util-linux/bin:$PATH"
 export PATH="/opt/homebrew/opt/util-linux/sbin:$PATH"
 export PATH="/opt/podman/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="$PATH:/usr/local/bin"
 {{ end -}}
+
 
 export N8N_RUNNERS_ENABLED=true
 export RAINFROG_CONFIG=~/.config/rainfrog
@@ -72,9 +75,6 @@ alias appsupport="cd ~/Library/Application\ Support"
 # macOS clipboard
 alias c="pbcopy"
 
-# Nix
-alias nixflakeconfig="v ~/.config/nix-darwin/flake.nix"
-
 # Games
 alias eldenring="~/Library/Application\ Support/CrossOver/Bottles/Steam/drive_c/Program\ Files\ \(x86\)/Steam/steamapps/common/ELDEN\ RING/"
 
@@ -119,7 +119,8 @@ alias tnode="npx ts-node"
 alias tnodet="npx ts-node -T"
 alias zel="zellij"
 alias emacsd="emacs --daemon"
-alias emacsc="emacsclient -c -a 'emacs'"
+# alias emacsc="emacsclient -c -a 'emacs'"
+alias emacsc="/opt/homebrew/bin/emacsclient -nc -a ''"
 alias wtpull="git fetch origin 'refs/heads/*:refs/heads/*'"
 alias h2='$(npm prefix -s)/node_modules/.bin/shopify hydrogen'
 unalias ls ll 2>/dev/null
