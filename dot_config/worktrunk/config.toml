@@ -206,7 +206,7 @@
 # """
 # <!-- DEFAULT_SQUASH_TEMPLATE_END -->
 
-[alias]
+[aliases]
 sw = "switch"
 
 worktree-path = '{{ repo_path }}/{{ branch | replace("/", ".") | replace("\\", ".") }}'
