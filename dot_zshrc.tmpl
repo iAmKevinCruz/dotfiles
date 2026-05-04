@@ -85,6 +85,7 @@ alias submitTime='pushd ~/coding_mac/repositories/my_apps/timeular-to-timecamp; 
 {{ if eq .chezmoi.os "linux" -}}
 # Linux-specific aliases
 alias c="xclip -selection clipboard"
+alias niriconfig="chezmoi edit ~/.config/niri/config.kdl"
 {{ end -}}
 
 # Project aliases (uses env vars from ~/.secrets)
