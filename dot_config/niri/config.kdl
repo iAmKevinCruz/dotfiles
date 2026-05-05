@@ -258,7 +258,9 @@ layout {
 // which may be more convenient to use.
 // See the binds section below for more spawn examples.
 
-spawn-at-startup "sh" "-c" "sleep 1 && exec qs -c noctalia-shell"
+// noctalia is launched by the user systemd unit `noctalia.service` for auto-restart on crash.
+// spawn-at-startup "sh" "-c" "sleep 1 && exec qs -c noctalia-shell"
+spawn-at-startup "vicinae" "server"
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // spawn-at-startup "waybar"
 
@@ -357,6 +359,7 @@ binds {
     // Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
     Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
+    Mod+Space hotkey-overlay-title="Toggle Vicinae" { spawn "vicinae" "toggle"; }
     // Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
@@ -601,9 +604,16 @@ binds {
     // Mod+Space       { switch-layout "next"; }
     // Mod+Shift+Space { switch-layout "prev"; }
 
-    Print { screenshot; }
-    Ctrl+Print { screenshot-screen; }
-    Alt+Print { screenshot-window; }
+    Print      { spawn "/home/kevin/.local/bin/screenshot-region"; }
+    Ctrl+Print { spawn "/home/kevin/.local/bin/screenshot-screen"; }
+    Alt+Print  { spawn "/home/kevin/.local/bin/screenshot-window"; }
+
+    // App focus-or-launch (meh = Ctrl+Alt+Shift)
+    Ctrl+Alt+Shift+Z { spawn "/home/kevin/.local/bin/focus-or-launch" "^zen$" "zen-browser"; }
+    Ctrl+Alt+Shift+T { spawn "/home/kevin/.local/bin/focus-or-launch" "ghostty" "ghostty"; }
+    Ctrl+Alt+Shift+S { spawn "/home/kevin/.local/bin/focus-or-launch" "^slack$" "slack"; }
+    Ctrl+Alt+Shift+E { spawn "/home/kevin/.local/bin/focus-or-launch" "^emacs$" "emacsclient" "-c" "-n"; }
+    Ctrl+Alt+Shift+B { spawn "/home/kevin/.local/bin/focus-or-launch" "^bruno$" "/home/kevin/Applications/Bruno.AppImage"; }
 
     // Applications such as remote-desktop clients and software KVM switches may
     // request that niri stops processing the keyboard shortcuts defined here
