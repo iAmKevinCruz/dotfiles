@@ -51,4 +51,6 @@ Library
 .local/bin/screenshot-screen
 .local/bin/screenshot-window
 .local/bin/focus-or-launch
+.config/niri
+.config/systemd
 {{ end -}}
