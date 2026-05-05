@@ -1,0 +1,10 @@
+#!/bin/sh
+# Full-screen screenshot (all outputs) → ~/screenshots/<timestamp>.png ; path → wl-clipboard
+mkdir -p "$HOME/screenshots"
+fname="$HOME/screenshots/$(date +%Y%m%d-%H%M%S).png"
+if grim "$fname"; then
+    printf "%s" "$fname" | wl-copy
+    notify-send -t 3000 "Screenshot saved" "$fname\n(path copied to clipboard)"
+else
+    notify-send -t 2000 "Screenshot failed"
+fi

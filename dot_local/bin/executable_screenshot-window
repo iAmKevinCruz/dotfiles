@@ -1,0 +1,12 @@
+#!/bin/sh
+# Active-window screenshot via niri's focused window geometry → ~/screenshots ; path → wl-clipboard
+mkdir -p "$HOME/screenshots"
+fname="$HOME/screenshots/$(date +%Y%m%d-%H%M%S).png"
+geom=$(niri msg --json focused-window 2>/dev/null | \
+    python3 -c 'import json,sys; w=json.load(sys.stdin); l=w["layout"]; print(f"{l[\"pos_in_scrolling_layout\"][0]},{l[\"pos_in_scrolling_layout\"][1]} {l[\"window_size\"][0]}x{l[\"window_size\"][1]}")' 2>/dev/null)
+if [ -n "$geom" ] && grim -g "$geom" "$fname"; then
+    printf "%s" "$fname" | wl-copy
+    notify-send -t 3000 "Screenshot saved" "$fname\n(path copied to clipboard)"
+else
+    notify-send -t 2000 "Screenshot failed" "Could not determine focused window geometry"
+fi

@@ -47,4 +47,8 @@ Library
 .local/bin/xclip
 .local/bin/xsel
 .local/bin/lemonade-open
+.local/bin/screenshot-region
+.local/bin/screenshot-screen
+.local/bin/screenshot-window
+.local/bin/focus-or-launch
 {{ end -}}

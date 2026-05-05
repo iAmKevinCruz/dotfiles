@@ -1,0 +1,78 @@
+#!/bin/sh
+# focus-or-launch APP_ID_REGEX LAUNCH_CMD [LAUNCH_ARG ...]
+#
+# Behavior:
+#   - No windows match  → run LAUNCH_CMD.
+#   - One window matches:
+#       - already focused → no-op
+#       - else            → focus it
+#   - Multiple windows match:
+#       - currently on one of them → cycle to next (wraps around)
+#       - else                     → focus the last one we focused (state file),
+#                                    or the first match if no state.
+# State stored at ~/.cache/niri-focus/<slug>.
+
+PATTERN="$1"
+shift
+if [ -z "$PATTERN" ] || [ $# -eq 0 ]; then
+    echo "usage: focus-or-launch APP_ID_REGEX LAUNCH_CMD..." >&2
+    exit 2
+fi
+
+SLUG=$(echo "$PATTERN" | tr -cd 'a-zA-Z0-9_-')
+STATE_DIR="$HOME/.cache/niri-focus"
+STATE="$STATE_DIR/$SLUG"
+mkdir -p "$STATE_DIR"
+
+# Query niri once: get currently focused id + ordered list of matching ids
+out=$(niri msg --json windows 2>/dev/null | PATTERN="$PATTERN" python3 -c '
+import json, sys, os, re
+pat = re.compile(os.environ["PATTERN"], re.I)
+ws = json.load(sys.stdin)
+focused = next((w["id"] for w in ws if w.get("is_focused")), None)
+matches = [w["id"] for w in ws if pat.search(w.get("app_id") or "")]
+print(focused if focused is not None else "")
+print(" ".join(str(i) for i in matches))
+' 2>/dev/null)
+
+focused_id=$(printf '%s\n' "$out" | sed -n '1p')
+match_ids=$(printf '%s\n' "$out" | sed -n '2p')
+
+# No matches → launch
+if [ -z "$match_ids" ]; then
+    "$@" >/dev/null 2>&1 &
+    exit 0
+fi
+
+# Set $1, $2, ... to the matching ids in order
+set -- $match_ids
+
+# Is the currently focused window one of the matches?
+on_match=
+for id in "$@"; do
+    [ "$id" = "$focused_id" ] && on_match=1 && break
+done
+
+if [ -n "$on_match" ]; then
+    # Cycle to next match (wrapping around)
+    target=""
+    take=
+    for id in "$@"; do
+        if [ -n "$take" ]; then target=$id; break; fi
+        [ "$id" = "$focused_id" ] && take=1
+    done
+    [ -z "$target" ] && target=$1
+else
+    # Not on a match — use last-focused-of-this-app from state, else first
+    last=$(cat "$STATE" 2>/dev/null)
+    target=
+    if [ -n "$last" ]; then
+        for id in "$@"; do
+            [ "$id" = "$last" ] && target=$id && break
+        done
+    fi
+    [ -z "$target" ] && target=$1
+fi
+
+echo "$target" > "$STATE"
+niri msg action focus-window --id "$target"
