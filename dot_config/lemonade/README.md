@@ -12,29 +12,50 @@ Two problems solved:
 1. **Clipboard from headless devbox** — TUIs like `lazysql`, `nvim`, and
    anything using Go's `atotto/clipboard` probe for `xclip` / `xsel`. Devbox
    has no X server, so those tools don't work. A shim named `xclip` on devbox
-   forwards the call over Tailscale to atlas (the MacBook), which writes to
-   the Mac clipboard.
-2. **Open URLs from devbox in the Mac's browser** — lazygit's `o` command,
-   `gh pr view --web`, and anything honoring `$BROWSER` now pop a browser tab
-   on atlas instead of failing silently on headless devbox.
+   forwards the call over Tailscale to whichever workstation is currently
+   online (sot or atlas), which writes to that machine's clipboard.
+2. **Open URLs from devbox in a real browser** — lazygit's `o` command,
+   `gh pr view --web`, and anything honoring `$BROWSER` pop a browser tab on
+   the active workstation instead of failing silently on headless devbox.
 
 ## Topology
 
+Kevin has two workstations (sot, atlas) and one headless dev server (devbox).
+Both workstations run a lemonade server; devbox has no server, only client
+shims. Shims probe the workstations in priority order (sot first) and dispatch
+to the first reachable one — so the URL or clipboard always lands on whichever
+machine Kevin is actually sitting at.
+
 ```
-           ┌─────────────────────┐               ┌────────────────────┐
-           │  devbox (Linux)     │  Tailscale    │  atlas (macOS M1)  │
-           │  100.90.74.115      │ ────────────► │  100.81.121.84     │
-           │                     │   TCP 2489    │                    │
-           │  ~/.local/bin/xclip │               │  lemonade server   │
-           │  ~/.local/bin/xsel  │               │  (launchd agent)   │
-           │  $BROWSER=          │               │                    │
-           │    lemonade-open    │               │  writes to         │
-           │                     │               │    pbcopy / open   │
-           └─────────────────────┘               └────────────────────┘
+                                    ┌──────────────────────┐
+                                    │  sot (Fedora)        │
+                              ┌────► │  100.72.212.29       │
+                              │     │  lemonade server     │
+                              │     │  (systemd --user)    │
+                              │     │                      │
+   ┌─────────────────────┐    │     │  writes to           │
+   │  devbox (Ubuntu)    │    │     │    wl-copy / xdg-open│
+   │  100.90.74.115      │    │     └──────────────────────┘
+   │                     │ ───┤        TCP 2489
+   │  ~/.local/bin/xclip │    │     ┌──────────────────────┐
+   │  ~/.local/bin/xsel  │    │     │  atlas (macOS M1)    │
+   │  $BROWSER=          │    └────► │  100.81.121.84       │
+   │    lemonade-open    │          │  lemonade server     │
+   │                     │          │  (launchd agent)     │
+   └─────────────────────┘          │                      │
+       Probe order:                 │  writes to           │
+       sot → atlas                  │    pbcopy / open     │
+                                    └──────────────────────┘
 ```
 
 Port **2489** (lemonade default). Allow-list **`100.64.0.0/10`** — the full
 Tailscale CGNAT range, so any of Kevin's tailnet nodes can talk to the server.
+
+### Probe + fallback
+
+Each shim does a 1s `bash /dev/tcp` probe against TCP 2489 on each host in
+order. First reachable wins. If neither responds (both workstations off /
+asleep), the shim exits non-zero with an error message. No silent hangs.
 
 ## Why no `lemonade.toml` config file
 
@@ -50,11 +71,12 @@ therefore baked into either the launchd plist (server) or the client shims
 | Path | Machine | Purpose |
 |---|---|---|
 | `~/Library/LaunchAgents/com.lemonade.server.plist` | atlas | launchd agent: starts `lemonade server` at login, keep-alive |
-| `~/.local/bin/xclip` | devbox | shim routing `xclip` calls to `lemonade copy`/`paste` |
-| `~/.local/bin/xsel` | devbox | symlink to `xclip` (same shim handles both) |
-| `~/.local/bin/lemonade-open` | devbox | `$BROWSER` wrapper → `lemonade open` |
+| `~/.config/systemd/user/lemonade.service` | sot | systemd --user unit: starts `lemonade server` at login, restart on failure |
+| `~/.local/bin/xclip` | devbox, sot | shim routing `xclip` calls to `lemonade copy`/`paste`; harmless on sot since real `xclip` would shadow this if installed |
+| `~/.local/bin/xsel` | devbox, sot | symlink to `xclip` (same shim handles both) |
+| `~/.local/bin/lemonade-open` | devbox, sot | `$BROWSER` wrapper → `lemonade open`; only actively used on devbox (BROWSER export is gated to devbox via hostname in `~/.zshenv`) |
 | `~/.config/lazygit/config.yml` | both | `os.openLink` routed through lemonade on linux, native `open` on darwin |
-| `~/.zshenv` | devbox | exports `BROWSER=$HOME/.local/bin/lemonade-open` |
+| `~/.zshenv` | devbox | exports `BROWSER=$HOME/.local/bin/lemonade-open` (gated on `eq .chezmoi.hostname "devbox"`) |
 
 Chezmoi source locations:
 
@@ -62,21 +84,27 @@ Chezmoi source locations:
 - `dot_local/bin/symlink_xsel` (contents: `xclip`)
 - `dot_local/bin/executable_lemonade-open`
 - `Library/LaunchAgents/com.lemonade.server.plist.tmpl`
+- `dot_config/systemd/user/lemonade.service`
 - `dot_config/lazygit/config.yml.tmpl` (custom `[[ ]]` delimiters to preserve lazygit's `{{ }}` syntax)
 - `dot_zshenv.tmpl`
 
-Machine targeting is handled via `.chezmoiignore` templating:
+Machine targeting via `.chezmoiignore` templating:
 
 ```
 {{ if ne .chezmoi.os "darwin" -}}
-Library/LaunchAgents/com.lemonade.server.plist
+Library
 {{ end -}}
 {{ if ne .chezmoi.os "linux" -}}
 .local/bin/xclip
 .local/bin/xsel
 .local/bin/lemonade-open
+.config/systemd
 {{ end -}}
 ```
+
+The `BROWSER` export is gated by **hostname** (not OS) inside `dot_zshenv.tmpl`,
+because both sot and atlas are workstations with native browsers — only devbox
+should redirect URL opens through lemonade.
 
 ## Installation
 
@@ -117,10 +145,33 @@ launchctl bootout gui/$(id -u) \
     ~/Library/LaunchAgents/com.lemonade.server.plist
 ```
 
+### Sot — enable the systemd --user unit
+
+```bash
+chezmoi apply                                       # writes the unit
+systemctl --user daemon-reload
+systemctl --user enable --now lemonade.service
+```
+
+Check it's running:
+
+```bash
+systemctl --user status lemonade.service           # expect: active (running)
+ss -ltnp | grep 2489                                # expect: lemonade LISTEN
+journalctl --user -u lemonade.service -n 50         # recent logs
+```
+
+If sot should serve when Kevin is logged out (rare — it's a workstation):
+
+```bash
+loginctl enable-linger kevin
+```
+
 ### Devbox — nothing else needed
 
 `chezmoi apply` drops the shims into `~/.local/bin/` (already first in `PATH`
 per `~/.zshenv`), which makes `xclip` and `xsel` resolve to the lemonade shim.
+The shims auto-discover whichever workstation is currently online.
 
 ## Testing
 

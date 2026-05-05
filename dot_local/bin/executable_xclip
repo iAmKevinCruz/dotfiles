@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
-# xclip/xsel shim → lemonade RPC to atlas (MacBook)
+# xclip/xsel shim → forwards clipboard ops to whichever workstation is online,
+# via lemonade RPC.
 #
 # Installed as ~/.local/bin/xclip and symlinked as ~/.local/bin/xsel so TUIs
 # (lazysql, nvim, atotto/clipboard, etc.) that probe for either tool pipe
-# their clipboard through lemonade to the Mac.
+# their clipboard through lemonade to Kevin's active workstation.
 #
-# Read mode (-o / --output) returns Mac clipboard contents.
-# Write mode (no -o flag) sends stdin to Mac clipboard.
+# Read mode (-o / --output) returns the workstation clipboard contents.
+# Write mode (no -o flag) sends stdin to the workstation clipboard.
 # All -selection / -b / -p / etc. flags are ignored — lemonade has one clipboard.
+#
+# Host selection: probe TCP 2489 with 1s timeout, first reachable wins.
+# Order = preference: sot first (primary workstation), atlas as fallback.
 
 set -euo pipefail
 
-HOST=100.81.121.84   # atlas Tailscale IP
 LEMONADE="$HOME/go/bin/lemonade"
+PORT=2489
+
+# Tailscale IPs — keep in sync with executable_lemonade-open and ~/.config/lemonade/README.md
+HOSTS=(
+  100.72.212.29   # sot   (Fedora workstation)
+  100.81.121.84   # atlas (MacBook Pro)
+)
 
 is_read=0
 for arg in "$@"; do
@@ -21,8 +31,15 @@ for arg in "$@"; do
   esac
 done
 
-if [[ $is_read -eq 1 ]]; then
-  exec "$LEMONADE" --host="$HOST" paste
-else
-  exec "$LEMONADE" --host="$HOST" copy
-fi
+for h in "${HOSTS[@]}"; do
+  if timeout 1 bash -c "exec 3<>/dev/tcp/$h/$PORT" 2>/dev/null; then
+    if [[ $is_read -eq 1 ]]; then
+      exec "$LEMONADE" --host="$h" paste
+    else
+      exec "$LEMONADE" --host="$h" copy
+    fi
+  fi
+done
+
+echo "xclip(lemonade): no reachable lemonade server on ${HOSTS[*]} port $PORT" >&2
+exit 1

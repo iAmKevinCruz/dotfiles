@@ -1,0 +1,22 @@
+[Unit]
+# Lemonade RPC server — opens URLs / proxies clipboard for SSH'd-in clients
+# (e.g. devbox running `lemonade-open URL` or `xclip` shim).
+#
+# Linux counterpart of atlas's launchd plist at:
+#   ~/Library/LaunchAgents/com.lemonade.server.plist
+# Flags MUST match the plist so behavior is identical regardless of which
+# workstation is currently active. See ~/.config/lemonade/README.md.
+Description=Lemonade RPC server (URL/clipboard forwarder)
+Documentation=https://github.com/lemonade-command/lemonade
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# --allow restricts inbound RPC to the Tailscale CGNAT range (100.64.0.0/10),
+# so only tailnet peers can drive this server.
+ExecStart=%h/go/bin/lemonade server --allow=100.64.0.0/10 --port=2489 --line-ending=lf --log-level=1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# tunnel — open an SSH local-forward tunnel.
+#
+# Forwards localhost:<port> on THIS machine to 127.0.0.1:<remote_port> on
+# <host>. Process foregrounds; Ctrl-C closes the tunnel.
+#
+# Most common use: `az login` from devbox.
+#   Microsoft disallows `--use-device-code` for Kevin's tenant, so az has to
+#   round-trip the OAuth code through localhost on the box that started the
+#   login. az picks a random port (e.g. 35345) and prints it in the URL.
+#   Tunnel that port back to whichever workstation has the browser:
+#
+#     # On devbox:
+#     az login                    # note port from URL: redirect_uri=...localhost%3A35345
+#
+#     # On sot/atlas:
+#     tunnel devbox 35345         # browser callback now reaches devbox's az
+#
+# Usage:
+#   tunnel <host> <port>                 # local <port> → host:<port>
+#   tunnel <host> <port> <remote_port>   # local <port> → host:<remote_port>
+#
+# Examples:
+#   tunnel devbox 35345                  # az login redirect catcher
+#   tunnel devbox 3000                   # poke at a dev server
+#   tunnel devbox 8080 80                # different ports each side
+
+set -euo pipefail
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  cat >&2 <<EOF
+usage: tunnel <host> <port> [<remote_port>]
+
+  host          SSH alias or hostname (e.g. devbox, atlas)
+  port          local port to bind on this machine
+  remote_port   port on <host> (default: same as <port>)
+
+Foregrounds; Ctrl-C closes the tunnel.
+EOF
+  exit 64
+fi
+
+host=$1
+port=$2
+remote_port=${3:-$2}
+
+echo "tunnel: localhost:$port → $host:127.0.0.1:$remote_port (Ctrl-C to close)" >&2
+exec ssh -L "$port:127.0.0.1:$remote_port" -N "$host"

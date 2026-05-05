@@ -1,4 +1,31 @@
 #!/usr/bin/env bash
-# BROWSER wrapper → opens URL in atlas (MacBook) default browser via lemonade.
-# Used by lazygit openLink, gh, xdg-open shim, and anything honoring $BROWSER.
-exec "$HOME/go/bin/lemonade" --host=100.81.121.84 open "$@"
+# BROWSER wrapper → opens URL in the *currently-active* workstation's browser
+# via lemonade RPC.
+#
+# Kevin moves between sot (Fedora) and atlas (MacBook). Either one may be
+# online, asleep, or off. We probe each host's lemonade port (TCP 2489) with
+# a 1s timeout and dispatch to the first reachable server.
+#
+# Order = preference: sot first (primary workstation), atlas as fallback.
+# Used by lazygit openLink, gh, xdg-open shim, anything honoring $BROWSER.
+
+set -euo pipefail
+
+LEMONADE="$HOME/go/bin/lemonade"
+PORT=2489
+
+# Tailscale IPs — keep in sync with executable_xclip and ~/.config/lemonade/README.md
+HOSTS=(
+  100.72.212.29   # sot   (Fedora workstation)
+  100.81.121.84   # atlas (MacBook Pro)
+)
+
+for h in "${HOSTS[@]}"; do
+  # /dev/tcp is a bash builtin; no nc/netcat dependency. `timeout` bounds hangs.
+  if timeout 1 bash -c "exec 3<>/dev/tcp/$h/$PORT" 2>/dev/null; then
+    exec "$LEMONADE" --host="$h" open "$@"
+  fi
+done
+
+echo "lemonade-open: no reachable lemonade server on ${HOSTS[*]} port $PORT" >&2
+exit 1
