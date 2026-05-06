@@ -62,6 +62,10 @@
  ?              Search backward
  Space          Start selection
  Enter          Copy selection
+ prefix + e     Scrollback -> nvim
+                (bottom)
+ E (in copy)    Scrollback -> nvim
+                at cursor
 
  OTHER
  ─────

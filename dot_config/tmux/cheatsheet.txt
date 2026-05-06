@@ -33,9 +33,12 @@
  prefix + [     Enter copy mode    prefix + r     Reload config
  q              Exit copy mode     prefix + :     Command prompt
  /              Search forward     prefix + ?     This cheatsheet
- ?              Search backward
- Space          Start selection    CREATE/KILL SESSIONS
- Enter          Copy selection     ────────────────────
+ ?              Search backward    prefix + e     Scrollback -> nvim
+ Space          Start selection                   (jumps to bottom)
+ Enter          Copy selection     E (in copy)    Scrollback -> nvim
+                                                  at cursor line
+                                   CREATE/KILL SESSIONS
+                                   ────────────────────
                                    :new-session -s name
  RESIZE PANES                      :kill-session
  ────────────                      prefix + w -> x  Kill from tree
