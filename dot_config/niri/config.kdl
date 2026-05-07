@@ -66,7 +66,7 @@ input {
 // Find more information on the wiki:
 // https://niri-wm.github.io/niri/Configuration:-Outputs
 // Remember to uncomment the node by removing "/-"!
-/-output "eDP-1" {
+output "eDP-1" {
     // Uncomment this line to disable this output.
     // off
 
@@ -76,10 +76,14 @@ input {
     // for the resolution.
     // If the mode is omitted altogether or is invalid, niri will pick one automatically.
     // Run `niri msg outputs` while inside a niri instance to list all outputs and their modes.
-    mode "1920x1080@120.030"
+    // mode "1920x1080@120.030"
+    mode "2560x1600@165.000"
 
     // You can use integer or fractional scale, for example use 1.5 for 150% scale.
-    scale 2
+    scale 1.3
+
+  // helps prevent tearing
+  variable-refresh-rate
 
     // Transform allows to rotate the output counter-clockwise, valid values are:
     // normal, 90, 180, 270, flipped, flipped-90, flipped-180 and flipped-270.
@@ -102,7 +106,7 @@ input {
 // https://niri-wm.github.io/niri/Configuration:-Layout
 layout {
     // Set gaps around windows in logical pixels.
-    gaps 16
+    gaps 8
 
     // When to center a column when changing focus, options are:
     // - "never", default behavior, focusing an off-screen column will keep at the left
@@ -150,7 +154,7 @@ layout {
         // off
 
         // How many logical pixels the ring extends out from the windows.
-        width 4
+        width 3
 
         // Colors can be set in a variety of ways:
         // - CSS named colors: "red"
@@ -158,7 +162,8 @@ layout {
         // - CSS-like notation: "rgb(255, 127, 0)", rgba(), hsl() and a few others.
 
         // Color of the ring on the active monitor.
-        active-color "#7fc8ff"
+        // active-color "#7fc8ff"
+        active-color "#bae1ff"
 
         // Color of the ring on inactive monitors.
         //
@@ -261,6 +266,7 @@ layout {
 // noctalia is launched by the user systemd unit `noctalia.service` for auto-restart on crash.
 // spawn-at-startup "sh" "-c" "sleep 1 && exec qs -c noctalia-shell"
 spawn-at-startup "vicinae" "server"
+spawn-at-startup "lxpolkit"
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // spawn-at-startup "waybar"
 
@@ -298,6 +304,12 @@ animations {
     // slowdown 3.0
 }
 
+// global rule for all windows
+window-rule {
+  geometry-corner-radius 12
+  clip-to-geometry true
+}
+
 // Window rules let you adjust behavior for individual windows.
 // Find more information on the wiki:
 // https://niri-wm.github.io/niri/Configuration:-Window-Rules
@@ -319,6 +331,24 @@ window-rule {
     // - Flatpak Firefox (app-id is "org.mozilla.firefox")
     match app-id=r#"firefox$"# title="^Picture-in-Picture$"
     open-floating true
+}
+
+// Satty annotation editor: open as a floating window (toggle with Mod+V).
+window-rule {
+    match app-id=r#"^com\.gabm\.satty$"#
+    open-floating true
+    open-focused true
+}
+
+// Meeting notes TUI: open floating, hugging the right edge.
+// Proportional sizing adapts across monitors (40% width, full height).
+window-rule {
+    match app-id=r#"^meeting-notes\.ghostty$"#
+    open-floating true
+    open-focused true
+    default-column-width { proportion 0.4; }
+    default-window-height { proportion 1.0; }
+    default-floating-position x=0 y=0 relative-to="top-right"
 }
 
 // Example: block out two password managers from screen capture.
@@ -358,6 +388,7 @@ binds {
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     // Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
+    Super+Alt+M hotkey-overlay-title="Meeting Notes" { spawn "/home/kevin/.local/bin/meeting-notes-toggle"; }
     Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
     Mod+Space hotkey-overlay-title="Toggle Vicinae" { spawn "vicinae" "toggle"; }
     // Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
@@ -604,9 +635,8 @@ binds {
     // Mod+Space       { switch-layout "next"; }
     // Mod+Shift+Space { switch-layout "prev"; }
 
-    Print      { spawn "/home/kevin/.local/bin/screenshot-region"; }
-    Ctrl+Print { spawn "/home/kevin/.local/bin/screenshot-screen"; }
-    Alt+Print  { spawn "/home/kevin/.local/bin/screenshot-window"; }
+    Print      { spawn "/home/kevin/.local/bin/screenshot-satty"; }
+    Ctrl+Print { spawn "/home/kevin/.local/bin/screenshot-satty-screen"; }
 
     // App focus-or-launch (meh = Ctrl+Alt+Shift)
     Ctrl+Alt+Shift+Z { spawn "/home/kevin/.local/bin/focus-or-launch" "^zen$" "zen-browser"; }
