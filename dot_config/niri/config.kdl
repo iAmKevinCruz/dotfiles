@@ -642,6 +642,8 @@ binds {
     Ctrl+Alt+Shift+Z { spawn "/home/kevin/.local/bin/focus-or-launch" "^zen$" "zen-browser"; }
     Ctrl+Alt+Shift+T { spawn "/home/kevin/.local/bin/focus-or-launch" "ghostty" "ghostty"; }
     Ctrl+Alt+Shift+S { spawn "/home/kevin/.local/bin/focus-or-launch" "^slack$" "slack"; }
+    Ctrl+Alt+Shift+M { spawn "/home/kevin/.local/bin/focus-or-launch" "superhuman" "brave-browser" "--app=https://mail.superhuman.com" "--user-data-dir=/home/kevin/.config/webapps/superhuman" "--class=webapp-superhuman"; }
+    Ctrl+Alt+Shift+G { spawn "/home/kevin/.local/bin/focus-or-launch" "^Sunsama$" "/home/kevin/Applications/Sunsama.AppImage"; }
     Ctrl+Alt+Shift+E { spawn "/home/kevin/.local/bin/focus-or-launch" "^emacs$" "emacsclient" "-c" "-n"; }
     Ctrl+Alt+Shift+B { spawn "/home/kevin/.local/bin/focus-or-launch" "^bruno$" "/home/kevin/Applications/Bruno.AppImage"; }
 
