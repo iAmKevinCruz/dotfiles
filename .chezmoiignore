@@ -52,5 +52,6 @@ Library
 .local/bin/screenshot-window
 .local/bin/focus-or-launch
 .config/niri
+.config/noctalia
 .config/systemd
 {{ end -}}
