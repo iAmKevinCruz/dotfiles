@@ -635,8 +635,12 @@ binds {
     // Mod+Space       { switch-layout "next"; }
     // Mod+Shift+Space { switch-layout "prev"; }
 
-    Print      { spawn "/home/kevin/.local/bin/screenshot-satty"; }
-    Ctrl+Print { spawn "/home/kevin/.local/bin/screenshot-satty-screen"; }
+    // noctalia screen-toolkit annotate (region) / annotateFullscreen
+    Print      { spawn "/usr/bin/qs" "-c" "noctalia-shell" "ipc" "call" "plugin:screen-toolkit" "annotate"; }
+    Ctrl+Print { spawn "/usr/bin/qs" "-c" "noctalia-shell" "ipc" "call" "plugin:screen-toolkit" "annotateFullscreen"; }
+    // old satty binds (kept for reference):
+    // Print      { spawn "/home/kevin/.local/bin/screenshot-satty"; }
+    // Ctrl+Print { spawn "/home/kevin/.local/bin/screenshot-satty-screen"; }
 
     // App focus-or-launch (meh = Ctrl+Alt+Shift)
     Ctrl+Alt+Shift+Z { spawn "/home/kevin/.local/bin/focus-or-launch" "^zen$" "zen-browser"; }
