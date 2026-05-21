@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# BROWSER wrapper → opens URL in the *currently-active* workstation's browser
-# via lemonade RPC.
-#
-# Kevin moves between sot (Fedora) and atlas (MacBook). Either one may be
-# online, asleep, or off. We probe each host's lemonade port (TCP 2489) with
-# a 1s timeout and dispatch to the first reachable server.
-#
-# Order = preference: sot first (primary workstation), atlas as fallback.
+# BROWSER wrapper → opens URL in sot's (Framework 16) browser via lemonade RPC.
 # Used by lazygit openLink, gh, xdg-open shim, anything honoring $BROWSER.
+#
+# Fire-and-forget + hard timeout. Rationale:
+#   * Devbox is headless — there's no point blocking the caller (lazygit,
+#     az login, etc.) on a successful remote browser-open.
+#   * `lemonade open` has been observed to accept the TCP connection but
+#     never ack the RPC, hanging the client indefinitely. Without setsid +
+#     timeout this freezes the entire TUI pane.
+#
+# Single host: atlas (MacBook) was retired in May 2026. Update HOST below
+# (and the matching entry in executable_xclip + ~/.config/lemonade/README.md)
+# if the workstation changes.
 
 set -euo pipefail
 
-LEMONADE="$HOME/go/bin/lemonade"
+HOST=100.72.212.29   # sot Tailscale IP
 PORT=2489
+LEMONADE="$HOME/go/bin/lemonade"
 
-# Tailscale IPs — keep in sync with executable_xclip and ~/.config/lemonade/README.md
-HOSTS=(
-  100.72.212.29   # sot   (Fedora workstation)
-  100.81.121.84   # atlas (MacBook Pro)
-)
+# Fast TCP probe so we exit cleanly with a useful message when sot is offline,
+# instead of waiting on the 3s timeout below.
+if ! timeout 1 bash -c "exec 3<>/dev/tcp/$HOST/$PORT" 2>/dev/null; then
+  echo "lemonade-open: sot ($HOST:$PORT) unreachable" >&2
+  exit 1
+fi
 
-for h in "${HOSTS[@]}"; do
-  # /dev/tcp is a bash builtin; no nc/netcat dependency. `timeout` bounds hangs.
-  if timeout 1 bash -c "exec 3<>/dev/tcp/$h/$PORT" 2>/dev/null; then
-    exec "$LEMONADE" --host="$h" open "$@"
-  fi
-done
-
-echo "lemonade-open: no reachable lemonade server on ${HOSTS[*]} port $PORT" >&2
-exit 1
+setsid -f timeout 3 "$LEMONADE" --host="$HOST" open "$@" \
+  </dev/null >/dev/null 2>&1
+exit 0

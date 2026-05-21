@@ -1,28 +1,23 @@
 #!/usr/bin/env bash
-# xclip/xsel shim → forwards clipboard ops to whichever workstation is online,
-# via lemonade RPC.
+# xclip/xsel shim → forwards clipboard ops to sot via lemonade RPC.
 #
 # Installed as ~/.local/bin/xclip and symlinked as ~/.local/bin/xsel so TUIs
 # (lazysql, nvim, atotto/clipboard, etc.) that probe for either tool pipe
-# their clipboard through lemonade to Kevin's active workstation.
+# their clipboard through lemonade to sot.
 #
-# Read mode (-o / --output) returns the workstation clipboard contents.
-# Write mode (no -o flag) sends stdin to the workstation clipboard.
+# Read mode (-o / --output) returns sot's clipboard contents.
+# Write mode (no -o flag) sends stdin to sot's clipboard.
 # All -selection / -b / -p / etc. flags are ignored — lemonade has one clipboard.
 #
-# Host selection: probe TCP 2489 with 1s timeout, first reachable wins.
-# Order = preference: sot first (primary workstation), atlas as fallback.
+# Hard timeout on every call: when the lemonade server is unreachable,
+# lemonade's client falls back to invoking xclip locally. This shim IS xclip
+# — without a timeout that becomes a fork bomb.
 
 set -euo pipefail
 
-LEMONADE="$HOME/go/bin/lemonade"
+HOST=100.72.212.29   # sot Tailscale IP
 PORT=2489
-
-# Tailscale IPs — keep in sync with executable_lemonade-open and ~/.config/lemonade/README.md
-HOSTS=(
-  100.72.212.29   # sot   (Fedora workstation)
-  100.81.121.84   # atlas (MacBook Pro)
-)
+LEMONADE="$HOME/go/bin/lemonade"
 
 is_read=0
 for arg in "$@"; do
@@ -31,15 +26,13 @@ for arg in "$@"; do
   esac
 done
 
-for h in "${HOSTS[@]}"; do
-  if timeout 1 bash -c "exec 3<>/dev/tcp/$h/$PORT" 2>/dev/null; then
-    if [[ $is_read -eq 1 ]]; then
-      exec "$LEMONADE" --host="$h" paste
-    else
-      exec "$LEMONADE" --host="$h" copy
-    fi
-  fi
-done
+if ! timeout 1 bash -c "exec 3<>/dev/tcp/$HOST/$PORT" 2>/dev/null; then
+  echo "xclip(lemonade): sot ($HOST:$PORT) unreachable" >&2
+  exit 1
+fi
 
-echo "xclip(lemonade): no reachable lemonade server on ${HOSTS[*]} port $PORT" >&2
-exit 1
+if [[ $is_read -eq 1 ]]; then
+  exec timeout 2 "$LEMONADE" --host="$HOST" paste
+else
+  exec timeout 2 "$LEMONADE" --host="$HOST" copy
+fi

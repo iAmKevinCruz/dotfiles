@@ -15,12 +15,12 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="$HOME/.cargo/bin:$PATH"
 
 {{ if eq .chezmoi.hostname "devbox" -}}
-# Devbox-only: forward URL opens to atlas's browser via lemonade.
+# Devbox-only: forward URL opens to sot's browser via lemonade.
 # Devbox is headless (no local browser), so tools honoring $BROWSER
 # (gh, lazygit, az login, xdg-open) need lemonade to ship the URL
-# over Tailscale to a `lemonade server` running on atlas.
+# over Tailscale to a `lemonade server` running on sot.
 #
-# Do NOT set this on machines with a local browser (sot, atlas) —
+# Do NOT set this on machines with a local browser (sot itself) —
 # it would redirect their own URL opens through lemonade and break
 # `xdg-open` / `az login` browser launches.
 export BROWSER="$HOME/.local/bin/lemonade-open"

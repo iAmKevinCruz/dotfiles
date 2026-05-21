@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# xdg-open shim → forwards URL/file opens to sot via lemonade-open.
+#
+# Overrides /usr/local/bin/xdg-open (which on devbox is a stub that just
+# prints "Open this URL manually") because ~/.local/bin is earlier in PATH.
+# Anything calling xdg-open — `az login`, `gh`, desktop entries — funnels
+# through here.
+
+exec "$HOME/.local/bin/lemonade-open" "$@"

@@ -45,7 +45,7 @@ os:
   edit: "nvr -cc vsplit --remote-wait +'set bufhidden=wipe' {{filename}}"
   # edit: '~/Library/Application\ Support/lazygit/bin/nvim-dynamic-server {{filename}}'
   [[- if eq .chezmoi.os "linux" ]]
-  # Route `o` (open PR/commit URL) through lemonade → atlas browser
+  # Route `o` (open PR/commit URL) through lemonade → sot browser
   openLink: 'lemonade-open {{link}}'
   [[- else ]]
   openLink: 'open {{link}}'
