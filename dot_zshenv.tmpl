@@ -11,7 +11,8 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 {{ end -}}
 
 # Cargo/Rust
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+export PATH="$HOME/.cargo/bin:$PATH"
 
 {{ if eq .chezmoi.hostname "devbox" -}}
 # Devbox-only: forward URL opens to atlas's browser via lemonade.
