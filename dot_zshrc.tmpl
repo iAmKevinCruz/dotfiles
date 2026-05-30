@@ -86,6 +86,7 @@ alias submitTime='pushd ~/coding_mac/repositories/my_apps/timeular-to-timecamp; 
 # Linux-specific aliases
 alias c="xclip -selection clipboard"
 alias niriconfig="chezmoi edit ~/.config/niri/config.kdl"
+alias vicinae-reset='pkill -9 vicinae; systemctl --user restart vicinae.service'
 {{ end -}}
 
 # Project aliases (uses env vars from ~/.secrets)

@@ -265,7 +265,7 @@ layout {
 
 // noctalia is launched by the user systemd unit `noctalia.service` for auto-restart on crash.
 // spawn-at-startup "sh" "-c" "sleep 1 && exec qs -c noctalia-shell"
-spawn-at-startup "vicinae" "server"
+spawn-at-startup "systemctl" "--user" "start" "vicinae.service"
 spawn-at-startup "lxpolkit"
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // spawn-at-startup "waybar"
@@ -391,6 +391,7 @@ binds {
     Super+Alt+M hotkey-overlay-title="Meeting Notes" { spawn "/home/kevin/.local/bin/meeting-notes-toggle"; }
     Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
     Mod+Space hotkey-overlay-title="Toggle Vicinae" { spawn "vicinae" "toggle"; }
+    Mod+Shift+Space hotkey-overlay-title="Restart Vicinae" { spawn-sh "pkill -9 vicinae; systemctl --user restart vicinae.service"; }
     // Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
