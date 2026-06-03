@@ -1207,6 +1207,26 @@
   (interactive)
   (org-node-seq-goto "d" (org-read-date)))
 
+
+;;; OBSIDIAN.EL
+;; Markdown-side companion to org-node. Indexes .md files only in the
+;; shared vault. Lets the same dir double as an Obsidian iOS vault for
+;; mobile parity, while .org files stay org-node territory.
+(use-package obsidian
+  :ensure t
+  :straight t
+  :after markdown-mode
+  :config
+  (setq obsidian-directory (expand-file-name "~/org"))
+  (setq obsidian-inbox-directory "0 Inbox")
+  (setq obsidian-daily-notes-directory "Timestamps/Journal")
+  (setq obsidian-templates-directory "Extras/Templates")
+  (setq obsidian-wiki-link-alias-first t)
+  (setq obsidian-backlinks-panel-position 'right)
+  (setq obsidian-backlinks-panel-width 50)
+  (global-obsidian-mode t)
+  (obsidian-update))
+
 (use-package org-roam
   :ensure t
   :init
@@ -1300,10 +1320,10 @@
   (evil-define-key 'normal 'global (kbd "<leader> f o") 'consult-org-heading)
   (evil-define-key 'normal 'global (kbd "<leader> t m") 'org-toggle-link-display)
 
-  ;; Org-agenda keybindings
-  (evil-define-key 'normal 'global (kbd "<leader> o a") 'org-agenda)           ;; Open agenda dispatcher
-  (evil-define-key 'normal 'global (kbd "<leader> o p") (lambda () (interactive) (org-agenda nil "p"))) ;; Projects view
-  (evil-define-key 'normal 'global (kbd "<leader> o d") (lambda () (interactive) (org-agenda nil "d"))) ;; Daily view
+  ;; Org-agenda keybindings (moved from `o *` to `a *` so `o *` is obsidian)
+  (evil-define-key 'normal 'global (kbd "<leader> a a") 'org-agenda)           ;; Open agenda dispatcher
+  (evil-define-key 'normal 'global (kbd "<leader> a p") (lambda () (interactive) (org-agenda nil "p"))) ;; Projects view
+  (evil-define-key 'normal 'global (kbd "<leader> a d") (lambda () (interactive) (org-agenda nil "d"))) ;; Daily view
 
   ;; Evil scroll in org-agenda
   (evil-define-key 'motion org-agenda-mode-map
@@ -1324,6 +1344,20 @@
   (evil-define-key 'normal 'global (kbd "<leader> n d d") 'ek/org-node-daily-today)
   (evil-define-key 'normal 'global (kbd "<leader> n d D") 'ek/org-node-daily-goto-date)
   (evil-define-key 'normal 'global (kbd "<leader> n d .") (lambda () (interactive) (dired "~/org/Timestamps/Journal")))
+
+  ;; Obsidian.el keybindings (parallel to org-node `n *`; `o *` for .md)
+  (evil-define-key 'normal 'global (kbd "<leader> o l") 'obsidian-toggle-backlinks-panel)
+  (evil-define-key 'normal 'global (kbd "<leader> o f") 'obsidian-jump)
+  (evil-define-key 'normal 'global (kbd "<leader> o i") 'obsidian-insert-wikilink)
+  (evil-define-key 'normal 'global (kbd "<leader> o I") 'obsidian-insert-link)
+  (evil-define-key 'normal 'global (kbd "<leader> o c") 'obsidian-capture)
+  (evil-define-key 'normal 'global (kbd "<leader> o m") 'obsidian-move-file)
+  (evil-define-key 'normal 'global (kbd "<leader> o b") 'obsidian-jump-back)
+  (evil-define-key 'normal 'global (kbd "<leader> o /") 'obsidian-search)
+  (evil-define-key 'normal 'global (kbd "<leader> o t") 'obsidian-find-tag)
+  (evil-define-key 'normal 'global (kbd "<leader> o T") 'obsidian-insert-tag)
+  (evil-define-key 'normal 'global (kbd "<leader> o d") 'obsidian-daily-note)
+  (evil-define-key 'normal 'global (kbd "<leader> o RET") 'obsidian-follow-link-at-point)
 
   ;; Flymake navigation
   (evil-define-key 'normal 'global (kbd "<leader> x x") 'consult-flymake);; Gives you something like `trouble.nvim'
