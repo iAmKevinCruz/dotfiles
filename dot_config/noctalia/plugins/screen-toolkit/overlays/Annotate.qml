@@ -108,6 +108,15 @@ Variants {
         property bool _cacheValid:      false
         property bool _cacheRebuilding: false
         property int  stepCounter:      1
+        // --- crop tool state (added) ---
+        property var  _cropStack:       []   // undo records: { backup, x, y, w, h, region, strokes }
+        property int  _cropCounter:     0
+        property real _pendingCropX:    0
+        property real _pendingCropY:    0
+        property real _pendingCropW:    0
+        property real _pendingCropH:    0
+        property string _pendingCropBackup: ""
+        property var  _pendingCropStrokes:  []
         property bool   isUploading:      false
         property string shareUrl:         ""
         property bool   showSharePopover: false
@@ -333,6 +342,115 @@ Variants {
                     + newW + "x" + newH + "! /tmp/screen-toolkit-annotate-zoom.png 2>/dev/null"
             ]})
         }
+        // --- crop tool: helpers + processes (added) ---
+        function _offsetStrokes(arr, dx, dy) {
+            var out = []
+            for (var i = 0; i < arr.length; i++) {
+                var s = arr[i]
+                var n = {}
+                for (var k in s) n[k] = s[k]
+                if (s.points) {
+                    var p = []
+                    for (var j = 0; j < s.points.length; j++)
+                        p.push({ x: s.points[j].x + dx, y: s.points[j].y + dy, w: s.points[j].w })
+                    n.points = p
+                }
+                if (s.x1 !== undefined) { n.x1 = s.x1 + dx; n.y1 = s.y1 + dy }
+                if (s.x2 !== undefined) { n.x2 = s.x2 + dx; n.y2 = s.y2 + dy }
+                out.push(n)
+            }
+            return out
+        }
+        function performCrop(x1, y1, x2, y2) {
+            if (root.zoomScale > 1.0) return
+            var cx = Math.max(0, Math.round(Math.min(x1, x2)))
+            var cy = Math.max(0, Math.round(Math.min(y1, y2)))
+            var cw = Math.round(Math.abs(x2 - x1))
+            var ch = Math.round(Math.abs(y2 - y1))
+            cw = Math.min(cw, root.regionW - cx)
+            ch = Math.min(ch, root.regionH - cy)
+            if (cw < 8 || ch < 8) return
+            var bkp = "/tmp/screen-toolkit-precrop-" + (overlayWin._cropCounter++) + ".png"
+            overlayWin._pendingCropX       = cx
+            overlayWin._pendingCropY       = cy
+            overlayWin._pendingCropW       = cw
+            overlayWin._pendingCropH       = ch
+            overlayWin._pendingCropBackup  = bkp
+            overlayWin._pendingCropStrokes = overlayWin.strokes.slice()
+            cropProc.exec({ command: ["bash", "-c",
+                "cp /tmp/screen-toolkit-annotate.png " + bkp + " && "
+                + "magick /tmp/screen-toolkit-annotate.png -crop "
+                + cw + "x" + ch + "+" + cx + "+" + cy
+                + " +repage /tmp/screen-toolkit-annotate-cropped.png && "
+                + "mv /tmp/screen-toolkit-annotate-cropped.png /tmp/screen-toolkit-annotate.png"
+            ]})
+        }
+        function undoCrop() {
+            if (overlayWin._cropStack.length === 0) return
+            var cs  = overlayWin._cropStack.slice()
+            var rec = cs.pop()
+            overlayWin._cropStack = cs
+            cropUndoProc._rec = rec
+            cropUndoProc.exec({ command: ["bash", "-c",
+                "cp " + rec.backup + " /tmp/screen-toolkit-annotate.png"] })
+        }
+        Process {
+            id: cropProc
+            onExited: (code) => {
+                if (!root.isVisible) return
+                if (code !== 0) {
+                    ToastService.showError("Crop failed")
+                    return
+                }
+                var rec = {
+                    backup:  overlayWin._pendingCropBackup,
+                    x:       root.regionX, y: root.regionY,
+                    w:       root.regionW, h: root.regionH,
+                    region:  root.lastRegion,
+                    strokes: overlayWin._pendingCropStrokes
+                }
+                var cs = overlayWin._cropStack.slice()
+                cs.push(rec)
+                overlayWin._cropStack = cs
+                overlayWin.strokes    = overlayWin._offsetStrokes(
+                    overlayWin.strokes, -overlayWin._pendingCropX, -overlayWin._pendingCropY)
+                overlayWin._redoStack = []
+                root.regionX   += overlayWin._pendingCropX
+                root.regionY   += overlayWin._pendingCropY
+                root.regionW    = overlayWin._pendingCropW
+                root.regionH    = overlayWin._pendingCropH
+                root.lastRegion = root.regionX + "," + root.regionY
+                    + " " + root.regionW + "x" + root.regionH
+                overlayWin._lastPreparedPath = ""
+                overlayWin.pixelImgReady     = false
+                root._resetToken++
+                overlayWin._invalidateCache()
+                overlayWin.preparePixelImage()
+                drawCanvas.requestPaint()
+                overlayWin.tool = "pencil"
+            }
+        }
+        Process {
+            id: cropUndoProc
+            property var _rec: null
+            onExited: (code) => {
+                if (!root.isVisible || code !== 0 || !cropUndoProc._rec) return
+                var rec = cropUndoProc._rec
+                root.regionX    = rec.x
+                root.regionY    = rec.y
+                root.regionW    = rec.w
+                root.regionH    = rec.h
+                root.lastRegion = rec.region
+                overlayWin.strokes    = rec.strokes
+                overlayWin._redoStack = []
+                overlayWin._lastPreparedPath = ""
+                overlayWin.pixelImgReady     = false
+                root._resetToken++
+                overlayWin._invalidateCache()
+                overlayWin.preparePixelImage()
+                drawCanvas.requestPaint()
+            }
+        }
         Process {
             id: pixelateProc
             onExited: (code) => {
@@ -461,6 +579,7 @@ Variants {
         Shortcut { sequence: "B"; enabled: overlayWin._toolKeysEnabled; onActivated: overlayWin.tool = "blur" }
         Shortcut { sequence: "N"; enabled: overlayWin._toolKeysEnabled; onActivated: overlayWin.tool = "step" }
         Shortcut { sequence: "M"; enabled: overlayWin._toolKeysEnabled; onActivated: overlayWin.tool = "ruler" }
+        Shortcut { sequence: "X"; enabled: overlayWin._toolKeysEnabled; onActivated: overlayWin.tool = "crop" }
         // --- Undo / redo ---
         Shortcut {
             sequence: "Ctrl+Z"
@@ -561,7 +680,9 @@ Variants {
                     cacheCanvas.unloadImage(pixUrl)
                     drawCanvas.unloadImage(pixUrl)
                     drawCanvas.requestPaint()
-                    cleanupProc.exec({ command: ["bash", "-c", "rm -f /tmp/screen-toolkit-annotate-zoom.png"] })
+                    overlayWin._cropStack   = []
+                    overlayWin._cropCounter = 0
+                    cleanupProc.exec({ command: ["bash", "-c", "rm -f /tmp/screen-toolkit-annotate-zoom.png /tmp/screen-toolkit-precrop-*.png /tmp/screen-toolkit-annotate-cropped.png"] })
                 } else {
                     overlayWin.preparePixelImage()
                 }
@@ -760,6 +881,38 @@ Variants {
             border.color: "#ffffff"
             border.width: Style.borderM
             opacity:      0.8
+        }
+        // --- crop selection preview (added) ---
+        Item {
+            visible: overlayWin.isPrimary
+                  && root.zoomScale <= 1.0
+                  && overlayWin.drawing
+                  && overlayWin.currentStroke !== null
+                  && overlayWin.currentStroke.type === "crop"
+            x:      overlayWin.localX
+            y:      overlayWin.localY
+            width:  root.regionW
+            height: root.regionH
+            property real selX: overlayWin.currentStroke
+                ? Math.min(overlayWin.currentStroke.x1, overlayWin.currentStroke.x2) : 0
+            property real selY: overlayWin.currentStroke
+                ? Math.min(overlayWin.currentStroke.y1, overlayWin.currentStroke.y2) : 0
+            property real selW: overlayWin.currentStroke
+                ? Math.abs(overlayWin.currentStroke.x2 - overlayWin.currentStroke.x1) : 0
+            property real selH: overlayWin.currentStroke
+                ? Math.abs(overlayWin.currentStroke.y2 - overlayWin.currentStroke.y1) : 0
+            // dim the four regions outside the selection
+            Rectangle { color: Qt.rgba(0,0,0,0.45); x: 0; y: 0; width: parent.width; height: parent.selY }
+            Rectangle { color: Qt.rgba(0,0,0,0.45); x: 0; y: parent.selY + parent.selH
+                        width: parent.width; height: parent.height - parent.selY - parent.selH }
+            Rectangle { color: Qt.rgba(0,0,0,0.45); x: 0; y: parent.selY
+                        width: parent.selX; height: parent.selH }
+            Rectangle { color: Qt.rgba(0,0,0,0.45); x: parent.selX + parent.selW; y: parent.selY
+                        width: parent.width - parent.selX - parent.selW; height: parent.selH }
+            Rectangle {
+                x: parent.selX; y: parent.selY; width: parent.selW; height: parent.selH
+                color: "transparent"; border.color: "#ffffff"; border.width: Style.borderM
+            }
         }
         Rectangle {
             visible: overlayWin.isPrimary && root.zoomScale > 1.0
@@ -991,6 +1144,13 @@ Variants {
                     if (mouse.button === Qt.RightButton) return
                     if (!overlayWin.drawing || !overlayWin.currentStroke) return
                     overlayWin.drawing = false
+                    if (overlayWin.currentStroke.type === "crop") {
+                        var cs = overlayWin.currentStroke
+                        overlayWin.currentStroke = null
+                        overlayWin.performCrop(cs.x1, cs.y1, cs.x2, cs.y2)
+                        drawCanvas.requestPaint()
+                        return
+                    }
                     var stroke = overlayWin.currentStroke
                     if (stroke.type === "blur")
                         stroke = {
@@ -1271,6 +1431,7 @@ Variants {
                 }
             }
             readonly property var toolDefs: [
+                { id: "crop",        icon: "crop",           tooltip: "Crop (X)"                                                  },
                 { id: "pencil",      icon: "pencil",         tooltip: root.mainInstance?.pluginApi?.tr("annotate.toolPencil")      },
                 { id: "highlighter", icon: "highlight",      tooltip: root.mainInstance?.pluginApi?.tr("annotate.toolHighlighter") },
                 { id: "line",        icon: "slash",          tooltip: root.mainInstance?.pluginApi?.tr("annotate.toolLine")        },
@@ -1318,6 +1479,8 @@ Variants {
                     overlayWin._redoStack = rs
                     overlayWin._invalidateCache()
                     drawCanvas.requestPaint()
+                } else {
+                    overlayWin.undoCrop()
                 }
             }
             function doRedo() {
@@ -1407,7 +1570,7 @@ Variants {
                     ActionBtn {
                         iconName:  "corner-up-left"
                         tip:       root.mainInstance?.pluginApi?.tr("annotate.undo")
-                        disabled:  overlayWin.strokes.length === 0
+                        disabled:  overlayWin.strokes.length === 0 && overlayWin._cropStack.length === 0
                         onClicked: toolbar.doUndo()
                     }
                     ActionBtn {
@@ -1510,7 +1673,7 @@ Variants {
                     ActionBtn {
                         iconName:  "corner-up-left"
                         tip:       root.mainInstance?.pluginApi?.tr("annotate.undo")
-                        disabled:  overlayWin.strokes.length === 0
+                        disabled:  overlayWin.strokes.length === 0 && overlayWin._cropStack.length === 0
                         onClicked: toolbar.doUndo()
                     }
                     ActionBtn {
