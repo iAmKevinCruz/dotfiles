@@ -1214,8 +1214,8 @@
 ;; mobile parity, while .org files stay org-node territory.
 (use-package obsidian
   :ensure t
-  :straight t
-  :after markdown-mode
+  :straight (obsidian :type git :host github :repo "licht1stein/obsidian.el")
+  :demand t
   :config
   (setq obsidian-directory (expand-file-name "~/org"))
   (setq obsidian-inbox-directory "0 Inbox")
