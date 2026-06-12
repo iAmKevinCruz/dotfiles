@@ -19,6 +19,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+# BROWSER tells the server's xdg-open which browser to use. Under niri
+# (XDG_CURRENT_DESKTOP=niri, unrecognized by xdg-open's generic path) and with
+# no BROWSER set, xdg-open scans a hardcoded list that omits zen-browser and
+# opens nothing. Naming it explicitly fixes the URL open.
+Environment=BROWSER=zen-browser
 # --allow restricts inbound RPC to the Tailscale CGNAT range (100.64.0.0/10),
 # so only tailnet peers can drive this server.
 ExecStart=%h/go/bin/lemonade server --allow=100.64.0.0/10 --port=2489 --line-ending=lf --log-level=1
