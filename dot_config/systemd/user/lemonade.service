@@ -8,6 +8,13 @@
 # workstation is currently active. See ~/.config/lemonade/README.md.
 Description=Lemonade RPC server (URL/clipboard forwarder)
 Documentation=https://github.com/lemonade-command/lemonade
+# Bind to the graphical session, NOT default.target. Under default.target this
+# starts at login before the Wayland compositor (niri) imports DISPLAY /
+# WAYLAND_DISPLAY, so the server inherits no display and silently fails to
+# launch a browser (the open RPC hangs). graphical-session.target is reached
+# after niri imports the session env, so the process gets a usable display.
+After=graphical-session.target
+PartOf=graphical-session.target
 After=network-online.target
 Wants=network-online.target
 
@@ -19,4 +26,4 @@ Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
