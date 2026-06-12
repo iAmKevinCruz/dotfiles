@@ -19,7 +19,7 @@ if [[ "$MODE" == "cursor" ]]; then
     LINE=$(( TOTAL - SCROLL - HEIGHT + 1 + CY ))
     (( LINE < 1 )) && LINE=1
     tmux send-keys -X cancel
-    tmux split-window -h "nvim -c 'setlocal buftype=nofile' +${LINE} '$TMP'"
+    tmux split-window -hZ "nvim -c 'setlocal buftype=nofile' +${LINE} '$TMP'"
 else
-    tmux split-window -h "nvim -c 'setlocal buftype=nofile' + '$TMP'"
+    tmux split-window -hZ "nvim -c 'setlocal buftype=nofile' + '$TMP'"
 fi

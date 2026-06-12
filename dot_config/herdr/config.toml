@@ -1,0 +1,49 @@
+onboarding = false
+
+[ui.toast]
+delivery = "herdr"
+
+[ui]
+show_agent_labels_on_pane_borders = true
+
+[experimental]
+pane_history = true
+
+[theme]
+name = "catppuccin"
+
+[keys]
+# Prefix stays ctrl+b (matches your tmux default — you never rebound it).
+# prefix = "ctrl+b"
+
+# --- Requested ---
+# Pane splits (tmux muscle memory). If the split axis feels swapped, swap these two.
+split_vertical = "prefix+|"
+split_horizontal = "prefix+-"
+
+# Alt+arrows change pane focus (mirrors your tmux `bind -n M-Left/Right/Up/Down`).
+focus_pane_left = "alt+left"
+focus_pane_down = "alt+down"
+focus_pane_up = "alt+up"
+focus_pane_right = "alt+right"
+
+# Alt+z zoom pane (tmux `bind -n M-z resize-pane -Z`).
+zoom = "alt+z"
+
+# Alt+w session navigator / fuzzy jumper (tmux `bind -n M-w` sesh popup).
+goto = "alt+w"
+
+# --- Suggested from your tmux config ---
+# Alt+n / Alt+p — next/prev tab (tmux M-n/M-p next/prev window).
+next_tab = "alt+n"
+previous_tab = "alt+p"
+
+# Alt+Shift+n / Alt+Shift+p — next/prev workspace (tmux M-N/M-P switch session).
+# Note: alt+shift chords can be flaky depending on terminal; swap to prefix+n/p if so.
+next_workspace = "alt+shift+n"
+previous_workspace = "alt+shift+p"
+
+# Direct number switching (optional): alt+1..9 focuses agent rows.
+# [keys.indexed]
+# tabs = "ctrl"        # ctrl+1..9 switch tabs directly
+# agents = "alt"       # alt+1..9 focus agent rows

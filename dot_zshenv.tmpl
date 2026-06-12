@@ -14,6 +14,12 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 export PATH="$HOME/.cargo/bin:$PATH"
 
+# Default editor — needed by non-interactive shells and daemons (e.g. herdr's
+# scrollback-to-editor, which spawns ${EDITOR:-vi} from the server process).
+# .zshrc may override this for interactive shells (e.g. nvr inside a session).
+export EDITOR='nvim'
+export VISUAL='nvim'
+
 {{ if eq .chezmoi.hostname "devbox" -}}
 # Devbox-only: forward URL opens to sot's browser via lemonade.
 # Devbox is headless (no local browser), so tools honoring $BROWSER
