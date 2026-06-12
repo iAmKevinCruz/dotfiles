@@ -22,8 +22,10 @@ Wants=network-online.target
 # BROWSER tells the server's xdg-open which browser to use. Under niri
 # (XDG_CURRENT_DESKTOP=niri, unrecognized by xdg-open's generic path) and with
 # no BROWSER set, xdg-open scans a hardcoded list that omits zen-browser and
-# opens nothing. Naming it explicitly fixes the URL open.
-Environment=BROWSER=zen-browser
+# opens nothing. Point it at a wrapper that launches Zen DETACHED, so the
+# server's synchronous open handler returns instantly and a slow/cold launch
+# (e.g. from `az login`) can't wedge the single-threaded server.
+Environment=BROWSER=%h/.local/bin/zen-open-detached
 # --allow restricts inbound RPC to the Tailscale CGNAT range (100.64.0.0/10),
 # so only tailnet peers can drive this server.
 ExecStart=%h/go/bin/lemonade server --allow=100.64.0.0/10 --port=2489 --line-ending=lf --log-level=1

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# BROWSER target for the lemonade server (sot). Launches Zen fully detached so
+# the server's *synchronous* open handler returns instantly. Without this, a
+# launch that doesn't return promptly (e.g. a cold start, or the browser-open
+# triggered by `az login`) blocks lemonade's single-threaded accept loop and
+# wedges ALL subsequent opens until the service is restarted.
+exec setsid -f zen-browser "$@" >/dev/null 2>&1
