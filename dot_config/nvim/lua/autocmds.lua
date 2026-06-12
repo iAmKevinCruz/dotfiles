@@ -30,3 +30,15 @@ vim.api.nvim_create_user_command('ExportQuickfix', function(opts)
   local filename = opts.args ~= "" and opts.args or "quickfix_export.md"
   utils.export_quickfix_to_markdown(filename)
 end, {nargs = '?'})
+
+-- herdr scrollback (prefix+e): herdr dumps the pane buffer to
+-- /tmp/herdr-scrollback-*.txt and opens $EDITOR with no line target, so nvim
+-- lands on line 1 (oldest). Jump to the bottom (most recent output, where the
+-- live pane is) and treat it as a scratch buffer, matching the old tmux flow.
+vim.api.nvim_create_autocmd({ 'BufReadPost', 'BufNewFile' }, {
+  pattern = '*/herdr-scrollback-*.txt',
+  callback = function()
+    vim.bo.buftype = 'nofile'
+    vim.cmd('normal! G')
+  end,
+})
