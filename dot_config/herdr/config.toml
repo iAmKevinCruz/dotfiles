@@ -47,3 +47,14 @@ previous_workspace = "alt+shift+p"
 # [keys.indexed]
 # tabs = "ctrl"        # ctrl+1..9 switch tabs directly
 # agents = "alt"       # alt+1..9 focus agent rows
+
+# prefix+e (built-in edit_scrollback) dumps the pane and opens nvim at the
+# bottom via the BufReadPost autocmd. prefix+shift+e instead opens nvim in a
+# temp pane positioned at the line currently visible on screen — the closest
+# herdr has to tmux's copy-cursor scrollback (herdr exposes no copy-mode cursor
+# line, so it anchors on the last visible non-blank line).
+[[keys.command]]
+key = "prefix+shift+e"
+type = "pane"
+description = "Scrollback → nvim at current view"
+command = "$HOME/.local/bin/herdr-scrollback-view"

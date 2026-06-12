@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# herdr custom command (bound via [[keys.command]] with type = "pane").
+# Dumps the *source* pane's scrollback into nvim, positioned near the line
+# currently visible on screen — the closest herdr analog to tmux's
+# copy-cursor scrollback flow (herdr exposes no copy-mode cursor line, so we
+# anchor on the last non-blank line of the visible viewport).
+#
+# Uses /tmp/herdr-scrollview-* (NOT herdr-scrollback-*) so it does not collide
+# with the BufReadPost autocmd that force-jumps the built-in prefix+e dump to
+# the bottom.
+set -euo pipefail
+
+src="${HERDR_ACTIVE_PANE_ID:-}"
+[ -n "$src" ] || { echo "no active pane id"; sleep 2; exit 1; }
+
+tmp="$(mktemp /tmp/herdr-scrollview-XXXXXX.txt)"
+trap 'rm -f "$tmp"' EXIT
+
+# Full scrollback, wrapped to the on-screen width so anchor text matches the
+# visible viewport read below.
+herdr pane read "$src" --source recent --lines 100000 > "$tmp" 2>/dev/null || true
+
+# Anchor = last non-blank line currently on screen.
+anchor="$(herdr pane read "$src" --source visible 2>/dev/null \
+          | grep -v '^[[:space:]]*$' | tail -1 || true)"
+
+if [ -s "$tmp" ] && [ -n "$anchor" ]; then
+  # Escape for nvim very-nomagic (\V) backward search; backslash must go first.
+  esc="$(printf '%s' "$anchor" | sed 's/\\/\\\\/g; s:/:\\/:g')"
+  exec nvim -c 'setlocal buftype=nofile' \
+            -c '$' -c "silent! ?\\V${esc}" -c 'normal! zz' -c 'nohlsearch' "$tmp"
+else
+  # No scrollback or no anchor — just open at the bottom.
+  exec nvim -c 'setlocal buftype=nofile' -c '$' "$tmp"
+fi
