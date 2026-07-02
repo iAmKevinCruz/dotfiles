@@ -96,15 +96,33 @@ its own URL opens through lemonade.
 
 ## Installation
 
-### Both machines — install the binary
+### ⚠️ Patched binary required — do NOT plain `go install`
+
+Upstream v1.1.2 has a server deadlock: the accept loop does `connCh <- conn`
+(buffer size 1) before serving each connection, but only the `URI.Open` RPC
+handler ever drains `connCh`. Any connection that never calls Open — the
+shims' bare TCP probes, every clipboard RPC — leaves its conn in the buffer,
+so the *next* connection's send blocks forever and the accept loop wedges.
+Symptom: server logs `Request from ...` then goes deaf (later conns pile up
+in CLOSE-WAIT, never logged) until restart; one probe re-wedges it instantly.
+Diagnosed and patched 2026-07-02; this was the real cause of the earlier
+"accepts TCP but never acks" lazygit freeze.
+
+Fix: `connch-deadlock.patch` (this directory) drains the stale conn before
+the send. Build:
 
 ```bash
-# devbox: go already on linuxbrew
-go install github.com/lemonade-command/lemonade@latest
-
-# sot: go already installed
-go install github.com/lemonade-command/lemonade@latest
+cp -r ~/go/pkg/mod/github.com/lemonade-command/lemonade@v1.1.2 /tmp/lemonade-build
+chmod -R u+w /tmp/lemonade-build
+patch -p1 -d /tmp/lemonade-build < ~/.config/lemonade/connch-deadlock.patch  # already applied in the diff paths — adjust -p as needed
+cd /tmp/lemonade-build && go build -o ~/go/bin/lemonade .
 ```
+
+Deploy the same patched binary to **both** machines (`scp` to sot, then
+`systemctl --user restart lemonade.service` on sot). Running `go install
+github.com/lemonade-command/lemonade@latest` will silently reintroduce the
+deadlock. Upstream backups: `~/go/bin/lemonade.v1.1.2-upstream` on both
+machines.
 
 Binary lands at `~/go/bin/lemonade` on both machines. Shims reference this
 absolute path, so `~/go/bin` does not need to be on `PATH`.
@@ -171,15 +189,27 @@ When URLs don't open or clipboard doesn't sync:
 2. **Port reachable?** `nc -zv 100.72.212.29 2489` from devbox.
 3. **Server up on sot?** `systemctl --user status lemonade.service` and
    `ss -ltnp | grep 2489`. If port is open but the RPC hangs (client logs
-   "Opening ..." but never returns), the server may need a restart:
-   `systemctl --user restart lemonade.service`.
+   "Opening ..." but never returns), check for the connCh deadlock: on sot,
+   `ss -tnp | grep 2489` showing CLOSE-WAIT conns with non-zero Recv-Q means
+   the accept loop is wedged — the binary is the unpatched upstream (see
+   Installation). Rebuild from the patch; a restart alone re-wedges on the
+   next probe/clipboard conn.
 4. **End-to-end probe** from devbox:
    `timeout 3 ~/go/bin/lemonade --host=100.72.212.29 open https://example.com`
    — success = browser tab on sot, no `dial tcp ... timeout`, exits 0.
+5. **Server logs** (only logs that exist — devbox wrapper discards client
+   output): on sot, `journalctl --user -u lemonade.service`. Healthy open =
+   one `Request from` line per connection. Wedged = requests stop being
+   logged while clients still connect.
 
-Past incident: lazygit's `Ctrl+o` froze its pane because the shim called
-`lemonade open` synchronously and the sot server accepted the connection
-but never acked. Mitigated by `setsid -f timeout 3` in `lemonade-open`.
+Past incident (2026-05): lazygit's `Ctrl+o` froze its pane because the shim
+called `lemonade open` synchronously and the sot server accepted the
+connection but never acked. Mitigated then by `setsid -f timeout 3` in
+`lemonade-open`; root cause found 2026-07-02 — the upstream connCh deadlock
+above.
+
+`lemonade-open` always prints `lemonade-open → sot: <url>` to stderr, so if
+the remote open fails silently the URL is still on screen to copy/paste.
 
 ## Security notes
 

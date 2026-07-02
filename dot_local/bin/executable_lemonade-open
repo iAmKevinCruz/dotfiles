@@ -19,10 +19,14 @@ HOST=100.72.212.29   # sot Tailscale IP
 PORT=2489
 LEMONADE="$HOME/go/bin/lemonade"
 
+# Always surface the URL so it can be copy/pasted if the remote open fails
+# (fire-and-forget below means failures on sot are otherwise silent).
+echo "lemonade-open → sot: $*" >&2
+
 # Fast TCP probe so we exit cleanly with a useful message when sot is offline,
 # instead of waiting on the 3s timeout below.
 if ! timeout 1 bash -c "exec 3<>/dev/tcp/$HOST/$PORT" 2>/dev/null; then
-  echo "lemonade-open: sot ($HOST:$PORT) unreachable" >&2
+  echo "lemonade-open: sot ($HOST:$PORT) unreachable — open manually: $*" >&2
   exit 1
 fi
 

@@ -1,0 +1,16 @@
+--- /home/kevin/go/pkg/mod/github.com/lemonade-command/lemonade@v1.1.2/server/server.go	2026-04-22 11:52:12.135733083 -0400
++++ /tmp/claude-1000/-home-kevin--config-lemonade/74d0857d-5f69-4caa-9ce0-8f3c0379cb7f/scratchpad/lemonade-patched/server/server.go	2026-07-02 09:49:07.682881099 -0400
+@@ -43,6 +43,13 @@
+ 		if !ra.InlucdeConn(conn) {
+ 			continue
+ 		}
++		// Drain any stale conn left by a connection that never invoked
++		// URI.Open (clipboard RPCs, bare TCP probes). Without this the
++		// send below blocks forever and wedges the accept loop.
++		select {
++		case <-connCh:
++		default:
++		}
+ 		connCh <- conn
+ 		rpc.ServeConn(conn)
+ 	}

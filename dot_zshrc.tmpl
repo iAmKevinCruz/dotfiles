@@ -232,9 +232,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-# Zoxide
-eval "$(zoxide init zsh)"
-
 # FZF
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
@@ -285,3 +282,7 @@ export PATH="$HOME/.opencode/bin:$PATH"
 [ -s "$NVM_DIR/nvm.sh" ] && source ~/.nvm/nvm.sh && nvm use --lts 2>/dev/null
 
 if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+
+# Zoxide — MUST be initialized last so its zsh hooks register after
+# oh-my-posh / nvm / wt (otherwise `zoxide doctor` warns on every command).
+eval "$(zoxide init zsh)"
