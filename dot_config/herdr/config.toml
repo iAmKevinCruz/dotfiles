@@ -38,13 +38,18 @@ goto = "alt+w"
 
 # --- Suggested from your tmux config ---
 # Alt+n / Alt+p — next/prev tab (tmux M-n/M-p next/prev window).
-next_tab = "alt+n"
-previous_tab = "alt+p"
+next_tab = ["alt+n", "prefix+n"]
+previous_tab = ["alt+p", "prefix+p"]
 
 # Alt+Shift+n / Alt+Shift+p — next/prev workspace (tmux M-N/M-P switch session).
 # Note: alt+shift chords can be flaky depending on terminal; swap to prefix+n/p if so.
 next_workspace = "alt+shift+n"
 previous_workspace = "alt+shift+p"
+
+# prefix+a / prefix+A — cycle agent panel entries (jumps pane focus, crosses
+# workspaces when agent_panel_scope = "all"; order follows agent_panel_sort).
+next_agent = "prefix+a"
+previous_agent = "prefix+shift+a"
 
 # Direct number switching (optional): alt+1..9 focuses agent rows.
 # [keys.indexed]
