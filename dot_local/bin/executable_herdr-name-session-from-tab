@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# herdr custom command (bound via [[keys.command]] with type = "pane").
+#
+# Renames the Claude Code session running in the *focused* pane to that pane's
+# tab title, using Claude's `/rename` slash command. This keeps the name shown
+# in `claude --resume`, the prompt box, the terminal title, and on claude.ai
+# (via the session bridge) aligned with the herdr tab label you use to track
+# what you're working on.
+#
+# herdr already knows the pane's claude session (its integration hook reports
+# session_id via pane.report_agent_session), so all we need is the tab label
+# and an injected slash command. herdr sets HERDR_ACTIVE_PANE_ID to the pane
+# that was focused when the key was pressed.
+set -euo pipefail
+
+note() { herdr notification show "session-name" --body "$1" >/dev/null 2>&1 || true; }
+
+# Source pane = focused pane at keypress. Fall back to the API if unset.
+src="${HERDR_ACTIVE_PANE_ID:-}"
+if [ -z "$src" ]; then
+  src="$(herdr pane current --current 2>/dev/null | jq -r '.result.pane.pane_id // empty')"
+fi
+[ -n "$src" ] || { note "no focused pane"; exit 0; }
+
+pane_json="$(herdr pane get "$src" 2>/dev/null)" || { note "pane query failed"; exit 0; }
+agent="$(printf '%s' "$pane_json"  | jq -r '.result.pane.agent // empty')"
+status="$(printf '%s' "$pane_json" | jq -r '.result.pane.agent_status // empty')"
+tab_id="$(printf '%s' "$pane_json" | jq -r '.result.pane.tab_id // empty')"
+
+[ "$agent" = "claude" ] || { note "not a claude pane (agent=${agent:-none})"; exit 0; }
+[ -n "$tab_id" ]        || { note "no tab id for pane"; exit 0; }
+
+label="$(herdr tab get "$tab_id" 2>/dev/null | jq -r '.result.tab.label // empty')"
+[ -n "$label" ] || { note "tab has no label"; exit 0; }
+
+# Only inject when claude is idle at its prompt. Typing mid-turn would land the
+# slash command in the wrong place (or queue as a prompt), so bail if busy.
+if [ "$status" != "idle" ]; then
+  note "claude is $status — sync when idle"
+  exit 0
+fi
+
+# /rename consumes the rest of the line as the new conversation name.
+# `herdr pane run` types the text and presses Enter in the focused REPL.
+herdr pane run "$src" "/rename $label"
+note "session renamed → $label"

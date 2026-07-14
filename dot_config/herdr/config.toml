@@ -6,6 +6,9 @@ delivery = "herdr"
 [ui]
 show_agent_labels_on_pane_borders = true
 
+agent_panel_scope = "all"
+agent_panel_sort = "priority"
+
 [experimental]
 pane_history = true
 
@@ -58,3 +61,23 @@ key = "prefix+shift+e"
 type = "pane"
 description = "Scrollback → nvim at current view"
 command = "$HOME/.local/bin/herdr-scrollback-view"
+
+# prefix+shift+r — rename the Claude session in the focused pane to match the
+# tab title. Injects Claude's /rename slash command, so the name propagates to
+# `claude --resume`, the terminal title, and claude.ai. Only fires when claude
+# is idle (won't corrupt input mid-turn).
+[[keys.command]]
+key = "prefix+shift+r"
+type = "pane"
+description = "Rename claude session → tab title"
+command = "$HOME/.local/bin/herdr-name-session-from-tab"
+
+# prefix+shift+s — open the focused pane's Claude transcript in nvim. Replaces
+# terminal scrollback for claude panes running the flicker-free ("tui":
+# "fullscreen") renderer, whose alt-screen output never lands in scrollback.
+# Full history, searchable, copyable.
+[[keys.command]]
+key = "prefix+shift+s"
+type = "pane"
+description = "Claude transcript → nvim"
+command = "$HOME/.local/bin/herdr-transcript-view"

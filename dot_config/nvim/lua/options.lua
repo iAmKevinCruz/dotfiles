@@ -25,6 +25,26 @@ if os.getenv('SSH_TTY') then
       ['*'] = require('vim.ui.clipboard.osc52').paste('*'),
     },
   }
+elseif not os.getenv('DISPLAY') and not os.getenv('WAYLAND_DISPLAY') then
+  -- Headless with no SSH_TTY (e.g. nvim spawned by the herdr server for
+  -- scrollback panes): nvim's builtin provider refuses xclip/xsel without
+  -- $DISPLAY, so wire the ~/.local/bin/xclip lemonade shim in explicitly —
+  -- it forwards to sot's clipboard over TCP and needs no display. Absolute
+  -- path: herdr-spawned nvim's PATH lacks ~/.local/bin.
+  local shim = vim.fn.expand('~/.local/bin/xclip')
+  if vim.fn.executable(shim) == 1 then
+    vim.g.clipboard = {
+      name = 'lemonade (xclip shim)',
+      copy = {
+        ['+'] = { shim },
+        ['*'] = { shim },
+      },
+      paste = {
+        ['+'] = { shim, '-o' },
+        ['*'] = { shim, '-o' },
+      },
+    }
+  end
 end
 
 -- Enable break indent

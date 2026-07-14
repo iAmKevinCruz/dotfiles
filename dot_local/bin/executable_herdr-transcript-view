@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# herdr custom command (bound via [[keys.command]] with type = "pane").
+#
+# Opens the *focused* pane's Claude Code conversation transcript in nvim, fully
+# rendered to searchable/copyable text. This replaces terminal scrollback for
+# claude panes running the flicker-free renderer (settings.json "tui":
+# "fullscreen"), whose alt-screen output never reaches the terminal scrollback
+# that prefix+[ / prefix+e read.
+#
+# herdr knows the pane's claude session id (reported by its integration hook via
+# pane.report_agent_session); the transcript lives at
+#   ~/.claude/projects/<slug>/<session-id>.jsonl
+# which we locate by id, then render turn-by-turn.
+set -euo pipefail
+
+note() { herdr notification show "transcript" --body "$1" >/dev/null 2>&1 || true; }
+
+src="${HERDR_ACTIVE_PANE_ID:-}"
+if [ -z "$src" ]; then
+  src="$(herdr pane current --current 2>/dev/null | jq -r '.result.pane.pane_id // empty')"
+fi
+[ -n "$src" ] || { note "no focused pane"; sleep 1; exit 0; }
+
+sid="$(herdr pane get "$src" 2>/dev/null | jq -r '.result.pane.agent_session.value // empty')"
+[ -n "$sid" ] || { note "no claude session in this pane"; sleep 1; exit 0; }
+
+# Locate the transcript by session id (robust against project-slug rules).
+jsonl="$(find "$HOME/.claude/projects" -maxdepth 2 -name "$sid.jsonl" -type f 2>/dev/null \
+         | head -1)"
+[ -n "$jsonl" ] && [ -f "$jsonl" ] || { note "transcript not found for $sid"; sleep 1; exit 0; }
+
+tmp="$(mktemp /tmp/herdr-transcript-XXXXXX.md)"
+trap 'rm -f "$tmp"' EXIT
+
+# Render conversation turns to readable text. Tool bodies are truncated so the
+# view stays about the conversation, not raw dumps.
+TRUNCATE_LINES="${HERDR_TRANSCRIPT_TRUNCATE:-40}" \
+python3 - "$jsonl" >"$tmp" <<'PY'
+import json, os, sys
+
+path = sys.argv[1]
+trunc = int(os.environ.get("TRUNCATE_LINES", "40"))
+
+def clip(text, n=trunc):
+    lines = text.rstrip("\n").split("\n")
+    if len(lines) <= n:
+        return "\n".join(lines)
+    hidden = len(lines) - n
+    return "\n".join(lines[:n]) + f"\n    … [{hidden} more lines]"
+
+def blocks(content):
+    """Yield rendered strings from a message .content (str or list of blocks)."""
+    if isinstance(content, str):
+        if content.strip():
+            yield content.rstrip()
+        return
+    if not isinstance(content, list):
+        return
+    for b in content:
+        if not isinstance(b, dict):
+            continue
+        t = b.get("type")
+        if t == "text":
+            txt = (b.get("text") or "").rstrip()
+            if txt:
+                yield txt
+        elif t == "thinking":
+            txt = (b.get("thinking") or "").rstrip()
+            if txt:
+                yield "[thinking]\n" + clip(txt)
+        elif t == "tool_use":
+            name = b.get("name", "tool")
+            inp = b.get("input", {})
+            # Prefer the most human field for common tools.
+            key = next((k for k in ("command", "file_path", "path", "pattern", "query", "prompt") if k in inp), None)
+            arg = inp.get(key) if key else json.dumps(inp, ensure_ascii=False)
+            arg = "" if arg is None else str(arg)
+            yield f"[tool: {name}] {clip(arg, 8)}"
+        elif t == "tool_result":
+            c = b.get("content")
+            if isinstance(c, list):
+                c = "\n".join(x.get("text", "") for x in c if isinstance(x, dict))
+            c = (c or "").rstrip() if isinstance(c, str) else ""
+            if c:
+                yield "[tool result]\n" + clip(c)
+
+def emit(role, content):
+    parts = list(blocks(content))
+    if not parts:
+        return
+    label = {"user": "USER", "assistant": "CLAUDE"}.get(role, role.upper())
+    print(f"\n{'─'*8} {label} {'─'*8}\n")
+    print("\n\n".join(parts))
+
+title = None
+for line in open(path, encoding="utf-8", errors="replace"):
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        d = json.loads(line)
+    except Exception:
+        continue
+    t = d.get("type")
+    if t in ("custom-title", "ai-title"):
+        title = d.get("customTitle") or d.get("aiTitle") or title
+    elif t in ("user", "assistant"):
+        msg = d.get("message") or {}
+        emit(t, msg.get("content"))
+
+hdr = f"# transcript — {title}" if title else "# transcript"
+print(hdr)
+PY
+
+# The header was printed last; move it to the top for context, then open at the
+# bottom (latest turn) — scroll up for history, / to search, y to yank.
+{ tail -1 "$tmp"; echo; head -n -1 "$tmp"; } > "$tmp.o" && mv "$tmp.o" "$tmp"
+
+exec nvim -c 'setlocal buftype=nofile bufhidden=wipe filetype=markdown' \
+          -c 'setlocal foldlevel=99' -c '$' "$tmp"
