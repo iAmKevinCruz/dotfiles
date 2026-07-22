@@ -83,3 +83,4 @@ keybind = ctrl+w=unbind
 
 keybind = global:alt+shift+t=toggle_quick_terminal
 quick-terminal-animation-duration = 0.1
+theme = noctalia
