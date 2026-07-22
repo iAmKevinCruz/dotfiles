@@ -1,0 +1,30 @@
+[general]
+copy-command = "wl-copy"
+output-filename = "~/screenshots/%Y%m%d-%H%M%S.png"
+
+# Try to float; niri's window-rule for com.gabm.satty also forces open-floating.
+floating-hack = true
+
+# Exit immediately after a save/copy action.
+early-exit = true
+early-exit-save-as = true
+
+# Defaults for the editor session.
+initial-tool = "brush"
+brush-smooth-history-size = 10
+corner-roundness = 12
+primary-highlighter = "block"
+
+# Satty's own toasts off — wrapper script handles desktop notifications.
+disable-notifications = true
+
+# Enter = save PNG to disk, exit. The wrapper script puts the path on the
+# clipboard after satty exits (satty's own copy-filepath action races with
+# early-exit and the wl-copy daemon, so we do it externally instead).
+actions-on-enter = ["save-to-file", "exit"]
+
+# Escape = quit without saving.
+actions-on-escape = ["exit"]
+
+# Right-click on the copy button = image to clipboard, exit.
+actions-on-right-click = ["save-to-clipboard", "exit"]

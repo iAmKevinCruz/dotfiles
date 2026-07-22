@@ -1,0 +1,195 @@
+# Noctalia v5 config — ported from v4 settings.json (2026-07-19)
+# v4 files (settings.json, colors.json, colorschemes/) kept for rollback.
+
+[theme]
+mode             = "dark"
+source           = "wallpaper"       # v4: useWallpaperColors = true
+wallpaper_scheme = "m3-tonal-spot"   # v4: generationMethod = "tonal-spot"
+
+[shell]
+avatar_path       = "~/.face"
+telemetry_enabled = false
+# clipboard_enabled = false          # v4 had history off; you re-enabled via GUI (settings.toml wins) — key retired
+
+# [shell.panel]
+# transparency_mode = "glass"          # v4: panelBackgroundOpacity 0.39
+
+# Screenshot → save PNG → open in Gradia to annotate → path on clipboard
+# (save_to_file matches your GUI override; GUI also set confirm_region = true)
+[shell.screenshot]
+save_to_file     = true
+directory        = "~/screenshots"
+filename_pattern = "%Y%m%d-%H%M%S"
+pipe_to_command  = true
+# After Gradia closes, copy the newest PNG in ~/screenshots — the annotated export
+# if you saved one (Ctrl+S into ~/screenshots), else the original capture.
+pipe_command     = 'flatpak run be.alexandervanhee.gradia "$NOCTALIA_SCREENSHOT_PATH"; f=$(command ls -t "$HOME/screenshots"/*.png 2>/dev/null | head -1); [ -n "$f" ] && printf %s "$f" | wl-copy && notify-send -t 3000 "Path copied" "$f"'
+# satty fallback:
+# pipe_command   = 'satty -f - -o "$NOCTALIA_SCREENSHOT_PATH" && printf %s "$NOCTALIA_SCREENSHOT_PATH" | wl-copy'
+
+# Replaces v4 ssh-sessions plugin (no v5 port yet): type "/ssh" in launcher
+[shell.launcher.dmenu.entry.ssh]
+command = "awk '/^Host /{print $2}' ~/.ssh/config"
+exec    = "ghostty -e ssh {selection}"
+prefix  = "ssh"
+glyph   = "server"
+
+# ── Session panel: v4 order lock/suspend/hibernate/reboot/logout/shutdown/uefi,
+#    all with 10 s countdown
+[[shell.session.actions]]
+action = "lock"
+shortcut = "1"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "suspend"
+shortcut = "2"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "command"
+label = "Hibernate"
+glyph = "moon"
+command = "systemctl hibernate"
+shortcut = "3"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "reboot"
+shortcut = "4"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "logout"
+shortcut = "5"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "shutdown"
+shortcut = "6"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "command"
+label = "UEFI Firmware"
+glyph = "settings"
+command = "systemctl reboot --firmware-setup"
+shortcut = "7"
+countdown_seconds = 10
+
+# ── Bar: v4 top bar, opacity 0.93, radius 12, 4px margins, no capsules
+# [bar.main]
+# position           = "top"
+# background_opacity = 0.93
+# radius             = 12
+# margin_edge        = 4
+# margin_ends        = 4
+# widget_spacing     = 6
+# capsule            = false
+
+# start  = ["launcher", "clock", "cpu", "temp", "ram", "active_window", "media"]
+# center = ["workspaces"]
+# end    = ["tray", "notifications", "battery", "volume", "brightness", "screenshot", "control-center"]
+
+# [widget.launcher]
+# glyph = "rocket"
+
+# [widget.clock]
+# format         = "{:%H:%M %a, %b %d}"   # v4: "HH:mm ddd, MMM dd"
+# tooltip_format = "{:%A, %B %d, %Y}"
+
+# v4 SystemMonitor compact: cpu usage + cpu temp + ram
+# [widget.cpu]
+# type    = "sysmon"
+# stat    = "cpu_usage"
+# display = "text"
+
+# [widget.temp]
+# type    = "sysmon"
+# stat    = "cpu_temp"
+# display = "text"
+
+# [widget.ram]
+# type    = "sysmon"
+# stat    = "ram_used"
+# display = "text"
+
+# [widget.active_window]
+# max_length   = 145
+# title_scroll = "on_hover"
+
+# [widget.media]
+# max_length         = 145
+# title_scroll       = "on_hover"
+# hide_when_no_media = true
+
+# [widget.workspaces]
+# display                   = "id"
+# max_label_chars           = 2
+# labels_only_when_occupied = true
+# focused_color             = "primary"
+# occupied_color            = "secondary"
+# empty_color               = "secondary"
+
+# [widget.tray]
+# drawer = true
+
+# [widget.battery]
+# display_mode = "graphic"    # v4: graphic-clean
+
+# [widget.volume]
+# show_label = false          # v4: displayMode onhover
+
+# [widget.brightness]
+# show_label = false          # v4: displayMode onhover
+
+# [widget.screenshot]
+# primary_click = "region"    # replaces v4 screen-toolkit annotate
+
+# Color picker plugin widget (bar lane entry "color-picker" lives in GUI settings.toml)
+[widget.color-picker]
+type = "oldirtty/color_picker:widget"
+
+# ── Dock: v4 enabled, auto-hide, floating, bottom
+# [dock]
+# enabled     = true
+# position    = "bottom"
+# auto_hide   = true
+# margin_edge = 8
+
+# ── Night light: v4 enabled + forced, 6500/4000 K
+[nightlight]
+enabled           = true
+force             = true
+temperature_day   = 6500
+temperature_night = 4000
+
+# ── Wallpaper: v4 dir + crop + 1.5 s transitions (pixelate has no v5 equivalent)
+[wallpaper]
+enabled             = true
+directory           = "/home/kevin/Pictures/Wallpapers"
+fill_mode           = "crop"
+transition          = ["fade", "disc", "stripes", "wipe", "honeycomb"]
+transition_duration = 1500
+
+# [osd]
+# position = "bottom_right"
+
+# ── Control Center shortcuts: v5 caps at 6 (v4 had 8; dropped wallpaper-perf + power_profile)
+# [[control_center.shortcuts]]
+# type = "wifi"
+
+# [[control_center.shortcuts]]
+# type = "bluetooth"
+
+# [[control_center.shortcuts]]
+# type = "wallpaper"
+
+# [[control_center.shortcuts]]
+# type = "notification"
+
+# [[control_center.shortcuts]]
+# type = "caffeine"
+
+# [[control_center.shortcuts]]
+# type = "nightlight"

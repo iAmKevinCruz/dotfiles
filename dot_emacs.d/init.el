@@ -1183,6 +1183,9 @@
   ;; Extract/new-node destination: prompt each time. read-directory-name
   ;; defaults to the source file's dir, so Enter = sibling, navigate for else.
   (setq org-node-file-directory-ask t)
+  ;; Bake ancestor olp/file prefix into completion candidate so fuzzy
+  ;; matching (orderless) hits ancestors, e.g. "aops class" → "AoPS > Class…"
+  (setq org-node-alter-candidates t)
   ;; Note: org-node-roam-accelerator-mode intentionally omitted. It requires
   ;; org-roam loaded before org-node :config runs, which breaks init. Files
   ;; are already cross-compatible via org-id, so no accelerator needed.
@@ -1196,6 +1199,14 @@
                (expand-file-name "~/org/Timestamps/Journal/")
                nil t)))
   (org-node-seq-mode))
+
+(defun ek/reload-init ()
+  "Reload ~/.emacs.d/init.el. M-x reload-init or M-x ek/reload-init."
+  (interactive)
+  (load-file user-init-file)
+  (message "Reloaded %s" user-init-file))
+(defalias 'reload-init #'ek/reload-init)
+(defalias 'reload-config #'ek/reload-init)
 
 (defun ek/org-node-daily-today ()
   "Jump to today's daily note via org-node sequence."
@@ -1216,14 +1227,27 @@
   :ensure t
   :straight (obsidian :type git :host github :repo "licht1stein/obsidian.el")
   :demand t
+  :init
+  ;; Enable Obsidian [[wikilinks]] globally: fontify, follow, AND backlink
+  ;; indexing all gate on this var (markdown-wiki-link-p / obsidian-find-links).
+  ;; Plain global defcustom (not buffer-local) so one setq covers every buffer.
+  (setq markdown-enable-wiki-links t)
+  (setq markdown-wiki-link-alias-first t)   ;; match obsidian-wiki-link-alias-first for native fontify
+  (setq markdown-wiki-link-fontify-missing t)
   :config
   (setq obsidian-directory (expand-file-name "~/org"))
   (setq obsidian-inbox-directory "0 Inbox")
+  (setq obsidian-create-unfound-files-in-inbox t)  ;; new wikilink targets land in inbox, not cwd
   (setq obsidian-daily-notes-directory "Timestamps/Journal")
   (setq obsidian-templates-directory "Extras/Templates")
   (setq obsidian-wiki-link-alias-first t)
   (setq obsidian-backlinks-panel-position 'right)
   (setq obsidian-backlinks-panel-width 50)
+  ;; Raw RET on a link: evil-collection binds RET to `markdown-do`, whose wiki
+  ;; resolver is vault-unaware (creates ./Name.md). Override in the obsidian
+  ;; minor-mode map (outranks markdown-mode-map) to use the vault-aware follower.
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal obsidian-mode-map (kbd "RET") 'obsidian-follow-link-at-point))
   (global-obsidian-mode t)
   (obsidian-update))
 
@@ -1386,8 +1410,9 @@
   (evil-define-key 'normal 'global (kbd "] c") 'diff-hl-next-hunk) ;; Next diff hunk
   (evil-define-key 'normal 'global (kbd "[ c") 'diff-hl-previous-hunk) ;; Previous diff hunk
 
-  ;; NeoTree command for file exploration
-  (evil-define-key 'normal 'global (kbd "<leader> e e") 'neotree-toggle)
+  ;; Treemacs file tree (mouse-friendly: click to expand, right-click menu, drag & drop to move files)
+  (evil-define-key 'normal 'global (kbd "<leader> e e") 'treemacs)
+  (evil-define-key 'normal 'global (kbd "<leader> e n") 'neotree-toggle)
   (evil-define-key 'normal 'global (kbd "<leader> e d") 'dired-jump)
 
   ;; Magit keybindings for Git integration
@@ -1436,6 +1461,8 @@
   ;; Tab navigation
   (evil-define-key 'normal 'global (kbd "<leader> t n") 'tab-new) ;; Open new tab
   (evil-define-key 'normal 'global (kbd "<leader> t x") 'tab-close) ;; Close current tab
+  (evil-define-key 'normal 'global (kbd "<leader> t o") 'tab-duplicate) ;; Open current buffer in new tab (nvim :tabnew %)
+  (evil-define-key 'normal 'global (kbd "<leader> t c") 'tab-close) ;; Close current tab (nvim parity)
   (evil-define-key 'normal 'global (kbd "] t") 'tab-next) ;; Go to next tab
   (evil-define-key 'normal 'global (kbd "[ t") 'tab-previous) ;; Go to previous tab
 
@@ -1693,6 +1720,54 @@
     (setq doom-modeline-icon nil))                     ;; Disable icons if nerd fonts are not being used.
   :hook
   (after-init . doom-modeline-mode))
+
+
+;;; TREEMACS
+;; The `treemacs' package provides a project-aware file tree sidebar with the best
+;; mouse support of any Emacs tree: single click expands folders, right click opens
+;; a context menu, and files can be moved or opened by dragging them with the mouse.
+(use-package treemacs
+  :ensure t
+  :straight t
+  :defer t                                   ;; Load the package only when needed to improve startup time.
+  :custom
+  (treemacs-width 35)                        ;; Width of the sidebar in characters.
+  (treemacs-show-hidden-files t)             ;; Show dotfiles (toggle with `th' inside the tree).
+  (treemacs-follow-after-init t)             ;; Focus the current file when the tree first opens.
+  (treemacs-is-never-other-window t)         ;; Window switching commands skip the sidebar.
+  :config
+  (treemacs-follow-mode t)                   ;; Keep the tree in sync with the file you are editing.
+  (treemacs-filewatch-mode t)                ;; Auto-refresh the tree when files change on disk.
+  (treemacs-git-mode 'simple)                ;; Color files and folders by their git status.
+  ;; Expand/collapse directories on a single left click, like most GUI file trees.
+  (define-key treemacs-mode-map [mouse-1] #'treemacs-single-click-expand-action))
+
+;;; TREEMACS-EVIL
+;; The `treemacs-evil' package provides evil-compatible keybindings inside the
+;; treemacs buffer, required since this config uses evil-mode.
+(use-package treemacs-evil
+  :ensure t
+  :straight t
+  :after (treemacs evil))
+
+;;; TREEMACS-NERD-ICONS
+;; The `treemacs-nerd-icons' package themes the tree with nerd font icons,
+;; matching the icons used across the rest of this config.
+(use-package treemacs-nerd-icons
+  :if ek-use-nerd-fonts                     ;; Load the package only if the user has configured to use nerd fonts.
+  :ensure t
+  :straight t
+  :after (treemacs nerd-icons)
+  :config
+  (treemacs-load-theme "nerd-icons"))
+
+;;; TREEMACS-MAGIT
+;; The `treemacs-magit' package refreshes the tree's git annotations whenever
+;; magit changes the state of the repository.
+(use-package treemacs-magit
+  :ensure t
+  :straight t
+  :after (treemacs magit))
 
 
 ;;; NEOTREE
@@ -2115,59 +2190,6 @@
            (message "Second Brain: No changes to commit")))))))
 
 (add-hook 'after-save-hook #'ek/second-brain-process-and-commit)
-
-
-;;; GREASE
-;; Oil.nvim-style file manager for Emacs.
-;; Edit directories as writable buffers - rename by editing text,
-;; delete by removing lines, create files by typing new entries.
-(straight-use-package
- '(grease :host github :repo "mwac-dev/grease.el" :branch "main"))
-
-;; Counter for unique grease buffer names
-(defvar grease-independent-counter 0)
-
-(defun grease-open-independent (&optional dir)
-  "Open grease in a new independent buffer.
-Each call creates a separate buffer that navigates independently."
-  (interactive)
-  (require 'grease)
-  (cl-incf grease-independent-counter)  ;; Actually increment the global counter
-  (let* ((dir (or dir default-directory))
-         (bufname (format "*grease-ind:%d*" grease-independent-counter)))
-    (with-current-buffer (get-buffer-create bufname)
-      (grease-mode)
-      (grease--render dir)
-      (goto-char (point-min))
-      (forward-line 1)
-      (grease--constrain-cursor))
-    (switch-to-buffer bufname)))
-
-(defun grease-open-dual-pane ()
-  "Open two independent grease buffers side by side.
-Left pane shows current directory, right pane also starts there.
-Navigate each independently, copy/paste between them."
-  (interactive)
-  (require 'grease)
-  (delete-other-windows)
-  (grease-open-independent default-directory)
-  (split-window-right)
-  (other-window 1)
-  (grease-open-independent default-directory)
-  (other-window -1))
-
-(use-package grease
-  :defer t
-  :custom
-  (grease-show-icons t)
-  (grease-show-hidden nil)
-  (grease-sort-method 'type)
-  :init
-  (ek/leader-keys
-    "f -" '(grease-here :wk "File manager (grease)")
-    "f d" '(grease-toggle :wk "Toggle grease")
-    "f D" '(grease-open-dual-pane :wk "Dual pane grease")
-    "f n" '(grease-open-independent :wk "New grease buffer")))
 
 
 ;;; SPELL CHECKING

@@ -5,5 +5,16 @@
 # prints "Open this URL manually") because ~/.local/bin is earlier in PATH.
 # Anything calling xdg-open — `az login`, `gh`, desktop entries — funnels
 # through here.
+#
+# SELF-HOST GUARD: sot runs the lemonade *server*. When the server opens a
+# URL it shells out to xdg-open, which (since this shim is chezmoi-applied to
+# sot too) would forward right back to lemonade — an infinite loop where no
+# real browser ever opens. On the lemonade host, bypass to the real system
+# xdg-open instead. Detect by hostname.
+if [[ "$(hostname -s)" == "sot" ]]; then
+  for real in /usr/bin/xdg-open /usr/local/bin/xdg-open; do
+    [[ -x "$real" ]] && exec "$real" "$@"
+  done
+fi
 
 exec "$HOME/.local/bin/lemonade-open" "$@"

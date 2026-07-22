@@ -95,6 +95,13 @@ vim.opt.listchars:append "eol:↴"
 opt.whichwrap:append "<>[]hl"
 
 if vim.g.neovide then
+  -- Open Neovide in the ~/org Obsidian vault when launched with no file args
+  -- (so `neovide somefile` still respects the file). Covers every launch
+  -- method — app launcher, niri keybind, shell — since it's nvim-side.
+  if vim.fn.argc() == 0 then
+    vim.fn.chdir(vim.fn.expand("~/org"))
+  end
+
   opt.colorcolumn = '100'
   -- Helper function for transparency formatting
   local alpha = function()
