@@ -273,10 +273,10 @@ export PATH="$HOME/.local/bin:$PATH"
 # Google Cloud SDK
 [ -f ~/google-cloud-sdk/path.zsh.inc ] && source ~/google-cloud-sdk/path.zsh.inc
 [ -f ~/google-cloud-sdk/completion.zsh.inc ] && source ~/google-cloud-sdk/completion.zsh.inc
-
-# OpenCode
-export PATH="$HOME/.opencode/bin:$PATH"
 {{ end -}}
+
+# OpenCode (only where installed — e.g. sot)
+[ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
 
 # Load NVM and use LTS
 [ -s "$NVM_DIR/nvm.sh" ] && source ~/.nvm/nvm.sh && nvm use --lts 2>/dev/null
