@@ -1,7 +1,7 @@
 -- Keymaps
 -- mini.files
 vim.keymap.set('n', '-', ':lua require("mini.files").open(vim.api.nvim_buf_get_name(0), true)<CR>', { desc = 'Open mini.files floating file manager at current directory', silent = true })
-vim.keymap.set('n', '<leader>fe', ':lua require("mini.files").open(vim.loop.cwd(), true)<CR>', { desc = 'Open mini.files floating file manager at root directory', silent = true })
+vim.keymap.set('n', '<leader>fe', ':lua require("mini.files").open(vim.uv.cwd(), true)<CR>', { desc = 'Open mini.files floating file manager at root directory', silent = true })
 
 -- mini.session
 vim.keymap.set('n', '<leader>msr', ':lua MiniSessions.read()<CR>', { desc = '[M]ini[S]ession [R]ead session', silent = true })
