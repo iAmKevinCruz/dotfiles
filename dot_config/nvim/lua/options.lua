@@ -129,10 +129,13 @@ if vim.g.neovide then
 end
 
 -- START LSP Settings
-vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(
-  vim.lsp.handlers.hover,
-  { border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' } }
-)
+-- vim.lsp.with() is deprecated since 0.12; wrap hover() to keep the rounded border.
+local lsp_hover = vim.lsp.buf.hover
+vim.lsp.buf.hover = function(config)
+  return lsp_hover(vim.tbl_deep_extend('force',
+    { border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' } },
+    config or {}))
+end
 -- END LSP Settings
 
 -- sync buffers automatically
