@@ -86,3 +86,15 @@ key = "prefix+shift+s"
 type = "pane"
 description = "Claude transcript → nvim"
 command = "$HOME/.local/bin/herdr-transcript-view"
+
+[[keys.command]]
+key = "prefix+f"
+type = "shell"
+description = "Open Herdr File Viewer plugin in split"
+command = "herdr plugin action invoke open-file-viewer --plugin herdr-file-viewer"
+
+[[keys.command]]
+key = "prefix+shift+f"
+type = "shell"
+description = "Open Herdr File Viewer plugin in tab"
+command = "herdr plugin action invoke open-file-viewer-tab --plugin herdr-file-viewer"
