@@ -20,23 +20,27 @@ Two problems solved:
 
 ## Topology
 
-Kevin has one workstation (sot, Framework 16 Dec 2025) and one headless dev
-server (devbox). Sot runs the lemonade server; devbox has no server, only
-client shims. (Atlas, the previous MacBook Pro workstation, was retired in
+Kevin has one workstation (sot, Framework 16 Dec 2025) and two headless
+servers (devbox, the T480; and aja, the always-on server). Sot runs the
+lemonade server; devbox and aja have no server, only client shims — both
+forward to sot. (Atlas, the previous MacBook Pro workstation, was retired in
 May 2026 — see `~/.claude/CLAUDE.md`.)
 
 ```
-   ┌─────────────────────┐                  ┌──────────────────────┐
-   │  devbox (Ubuntu)    │   Tailscale      │  sot (Linux)         │
-   │  100.90.74.115      │ ───────────────► │  100.72.212.29       │
-   │                     │     TCP 2489     │  lemonade server     │
-   │  ~/.local/bin/xclip │                  │  (systemd --user)    │
-   │  ~/.local/bin/xsel  │                  │                      │
-   │  ~/.local/bin/      │                  │  writes to           │
-   │    xdg-open         │                  │    wl-copy / xdg-open│
-   │  $BROWSER=          │                  │                      │
-   │    lemonade-open    │                  │                      │
+   ┌─────────────────────┐
+   │  devbox (Ubuntu)    │ ─┐
+   │  100.90.74.115      │  │
+   │  client shims       │  │               ┌──────────────────────┐
+   └─────────────────────┘  │   Tailscale   │  sot (Linux)         │
+                            ├─────────────► │  100.72.212.29       │
+   ┌─────────────────────┐  │    TCP 2489   │  lemonade server     │
+   │  aja (Fedora)       │  │               │  (systemd --user)    │
+   │  100.124.65.121     │ ─┘               │  writes to           │
+   │  client shims       │                  │    wl-copy / xdg-open│
    └─────────────────────┘                  └──────────────────────┘
+
+   Each client provides:  ~/.local/bin/{xclip,xsel,xdg-open,lemonade-open}
+                          $BROWSER=~/.local/bin/lemonade-open
 ```
 
 Port **2489** (lemonade default). Allow-list **`100.64.0.0/10`** — the full
@@ -73,12 +77,12 @@ therefore baked into either the systemd unit (server) or the client shims
 | Path | Machine | Purpose |
 |---|---|---|
 | `~/.config/systemd/user/lemonade.service` | sot | systemd --user unit: starts `lemonade server` at login, restart on failure |
-| `~/.local/bin/xclip` | devbox | shim routing `xclip` calls to `lemonade copy`/`paste` |
-| `~/.local/bin/xsel` | devbox | symlink to `xclip` (same shim handles both) |
-| `~/.local/bin/xdg-open` | devbox | overrides `/usr/local/bin/xdg-open` stub; forwards to `lemonade-open` |
-| `~/.local/bin/lemonade-open` | devbox | `$BROWSER` wrapper → `lemonade open` (fire-and-forget) |
+| `~/.local/bin/xclip` | devbox, aja | shim routing `xclip` calls to `lemonade copy`/`paste` |
+| `~/.local/bin/xsel` | devbox, aja | symlink to `xclip` (same shim handles both) |
+| `~/.local/bin/xdg-open` | devbox, aja | overrides `/usr/local/bin/xdg-open` stub; forwards to `lemonade-open` (self-host guard bypasses to real xdg-open on sot) |
+| `~/.local/bin/lemonade-open` | devbox, aja | `$BROWSER` wrapper → `lemonade open` (fire-and-forget) |
 | `~/.config/lazygit/config.yml` | both | `os.openLink` routed through lemonade on linux, native `open` on darwin |
-| `~/.zshenv` | devbox | exports `BROWSER=$HOME/.local/bin/lemonade-open` (gated on `eq .chezmoi.hostname "devbox"`) |
+| `~/.zshenv` | devbox, aja | exports `BROWSER=$HOME/.local/bin/lemonade-open` (gated on hostname `devbox` or `aja`) |
 
 Chezmoi source locations:
 
@@ -90,9 +94,9 @@ Chezmoi source locations:
 - `dot_config/lazygit/config.yml.tmpl` (custom `[[ ]]` delimiters to preserve lazygit's `{{ }}` syntax)
 - `dot_zshenv.tmpl`
 
-The `BROWSER` export is gated by **hostname** (only `devbox`) inside
-`dot_zshenv.tmpl`, because sot has a native browser and should not redirect
-its own URL opens through lemonade.
+The `BROWSER` export is gated by **hostname** (only `devbox` and `aja`, the
+two headless clients) inside `dot_zshenv.tmpl`, because sot has a native
+browser and should not redirect its own URL opens through lemonade.
 
 ## Installation
 
@@ -118,14 +122,27 @@ patch -p1 -d /tmp/lemonade-build < ~/.config/lemonade/connch-deadlock.patch  # a
 cd /tmp/lemonade-build && go build -o ~/go/bin/lemonade .
 ```
 
-Deploy the same patched binary to **both** machines (`scp` to sot, then
-`systemctl --user restart lemonade.service` on sot). Running `go install
-github.com/lemonade-command/lemonade@latest` will silently reintroduce the
-deadlock. Upstream backups: `~/go/bin/lemonade.v1.1.2-upstream` on both
-machines.
+Deploy the same patched binary to **every machine**. Sot needs it to *run*
+the server; devbox and aja need it because the client shims exec
+`~/go/bin/lemonade` directly. Only sot has a `go` toolchain that builds it —
+for the shim-only clients just `scp` the built binary across (aja has no `go`
+at all):
 
-Binary lands at `~/go/bin/lemonade` on both machines. Shims reference this
-absolute path, so `~/go/bin` does not need to be on `PATH`.
+```bash
+# from a machine that has the patched binary (sot or devbox):
+scp ~/go/bin/lemonade aja:~/go/bin/lemonade      # aja is shim-only, no go
+# on sot after replacing its binary:
+systemctl --user restart lemonade.service
+```
+
+Running `go install github.com/lemonade-command/lemonade@latest` will silently
+reintroduce the deadlock. Upstream backups: `~/go/bin/lemonade.v1.1.2-upstream`
+on the machines that built it (sot, devbox).
+
+Binary lands at `~/go/bin/lemonade` on every machine. Shims reference this
+absolute path, so `~/go/bin` does not need to be on `PATH`. Verify all copies
+match: `sha256sum ~/go/bin/lemonade` — the patched build is
+`b778efdb6162e1db8a716dd26e5be026eba3cacb465d9cae502d767b49ffbf45`.
 
 ### Sot — enable the systemd --user unit
 
@@ -149,11 +166,13 @@ If sot should serve when Kevin is logged out (rare — it's a workstation):
 loginctl enable-linger kevin
 ```
 
-### Devbox — nothing else needed
+### Devbox / aja — shims + binary, nothing else
 
 `chezmoi apply` drops the shims into `~/.local/bin/` (already first in `PATH`
 per `~/.zshenv`), which makes `xclip`, `xsel`, and `xdg-open` resolve to the
-lemonade shims.
+lemonade shims, and sets `$BROWSER` via the hostname gate. The only extra step
+is the patched binary at `~/go/bin/lemonade` (see Installation above) — the
+shims exec it by absolute path.
 
 ## Testing
 
@@ -220,7 +239,7 @@ the remote open fails silently the URL is still on screen to copy/paste.
 - The `open` subcommand executes `xdg-open <url>` on sot, which can launch
   any registered URL handler. Anything on the tailnet that can reach port
   2489 can open arbitrary URLs on sot. Given Kevin's tailnet membership
-  (devbox, iPhone, sot only), acceptable risk.
+  (devbox, aja, iPhone, sot only), acceptable risk.
 - Clipboard contents cross the wire in both directions — don't use while on
   a shared/untrusted tailnet.
 
