@@ -1,3 +1,5 @@
+worktree-path = '{{ repo_path }}/{{ branch | replace("/", ".") | replace("\\", ".") }}'
+
 # # User Configuration
 #
 # Create with `wt config create`.
